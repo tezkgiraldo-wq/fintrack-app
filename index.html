@@ -491,6 +491,7 @@ input,select{font-family:inherit;font-size:inherit;color:inherit}
 .fx-type-btn{padding:9px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--bg3);color:var(--text3);transition:all .15s}
 .fx-type-btn.compra.sel{background:#1A2D1A;border-color:var(--green);color:var(--green)}
 .fx-type-btn.venta.sel{background:#2D1A1A;border-color:var(--red);color:var(--red)}
+.fx-type-btn.ingreso.sel-ing{background:#1A1500;border-color:var(--gold);color:var(--gold)}
 .fx-del-btn{background:var(--red)11;border:1px solid var(--red)33;border-radius:6px;color:var(--red);font-size:11px;padding:4px 10px;cursor:pointer}
 
 /* ── VISTA AÑO ── */
@@ -993,20 +994,25 @@ input,select{font-family:inherit;font-size:inherit;color:inherit}
         <div class="fx-type-toggle">
           <button class="fx-type-btn compra sel" id="fx-btn-compra" onclick="setFxTipo('COMPRA')">↑ Compra</button>
           <button class="fx-type-btn venta" id="fx-btn-venta" onclick="setFxTipo('VENTA')">↓ Venta</button>
+          <button class="fx-type-btn ingreso" id="fx-btn-ingreso" onclick="setFxTipo('INGRESO')" style="border-color:var(--gold)44;color:var(--gold)">💰 Ingreso</button>
         </div>
         <div>
           <div class="s-lbl">Fecha</div>
           <input type="date" id="fx-fecha" class="s-inp">
         </div>
-        <div class="grid2">
+        <div class="grid2" id="fx-cop-row">
           <div>
             <div class="s-lbl">COP</div>
             <input id="fx-cop" class="s-inp" inputmode="numeric" placeholder="0">
           </div>
           <div>
-            <div class="s-lbl">USD</div>
+            <div class="s-lbl" id="fx-usd-lbl">USD</div>
             <input id="fx-usd-inp" class="s-inp" inputmode="decimal" placeholder="0.00">
           </div>
+        </div>
+        <div id="fx-cat-row" style="display:none">
+          <div class="s-lbl" style="color:var(--gold)">Categoría ingreso</div>
+          <select id="fx-ingreso-cat" class="s-inp" style="color:var(--gold)"></select>
         </div>
         <div>
           <div class="s-lbl">Plataforma / Notas</div>
@@ -2244,7 +2250,7 @@ function renderBalance(){
   // FX
   const fx=dbq("SELECT tipo,cop,usd FROM cartera_fx ORDER BY fecha,id");
   let tu=0,tc=0;
-  fx.forEach(r=>{if(r.tipo==='COMPRA'){tu+=r.usd;tc+=r.cop;}else{const avg=tu?tc/tu:0;tu-=r.usd;tc-=r.usd*avg;}});
+  fx.forEach(r=>{if(r.tipo==='COMPRA'){tu+=r.usd;tc+=r.cop;}else if(r.tipo==='INGRESO'){tu+=r.usd;}else{const avg=tu?tc/tu:0;tu-=r.usd;tc-=r.usd*avg;}});
   const tasa=parseFloat((dbq("SELECT valor FROM config WHERE clave='tasa_usd'")[0]||{valor:4100}).valor);
   const usdReal=bm.usd_reales_binance!=null?bm.usd_reales_binance:tu;
   const usdCop=usdReal*tasa;
@@ -2422,6 +2428,9 @@ let _fxTipo='COMPRA', _fxEditId=null;
 function openFxSheet(row=null){
   _fxEditId=row?row.id:null;
   _fxTipo=row?row.tipo:'COMPRA';
+  // Reset cat dropdown loaded flag so it refreshes
+  const catSel=$('fx-ingreso-cat');
+  if(catSel)delete catSel.dataset.loaded;
   setFxTipo(_fxTipo);
   const today=new Date().toISOString().slice(0,10);
   $('fx-fecha').value=row?row.fecha:today;
@@ -2436,6 +2445,21 @@ function setFxTipo(t){
   _fxTipo=t;
   $('fx-btn-compra').className='fx-type-btn compra'+(t==='COMPRA'?' sel':'');
   $('fx-btn-venta').className='fx-type-btn venta'+(t==='VENTA'?' sel':'');
+  const ingBtn=$('fx-btn-ingreso');
+  if(ingBtn)ingBtn.className='fx-type-btn ingreso'+(t==='INGRESO'?' sel-ing':'');
+  const isIng=t==='INGRESO';
+  const copRow=$('fx-cop-row'),catRow=$('fx-cat-row'),usdLbl=$('fx-usd-lbl');
+  if(copRow)copRow.style.display=isIng?'none':'';
+  if(catRow){catRow.style.display=isIng?'':'none';if(isIng)pwaLoadFxCats();}
+  if(usdLbl)usdLbl.textContent=isIng?'USD recibidos':'USD';
+}
+
+function pwaLoadFxCats(){
+  const sel=$('fx-ingreso-cat');
+  if(!sel||sel.dataset.loaded)return;
+  const cats=dbq("SELECT id,nombre,tipo,color FROM categorias WHERE activo=1 AND tipo='ingreso' ORDER BY nombre");
+  sel.innerHTML=cats.map(c=>`<option value="${c.nombre}">${c.nombre}</option>`).join('');
+  sel.dataset.loaded='1';
 }
 function saveTasa(val){
   const t=parseNum(val);
@@ -2489,9 +2513,32 @@ async function fetchTasaOnline(){
 }
 function guardarFx(){
   const fecha=$('fx-fecha').value;
+  const notas=$('fx-notas').value.trim();
+  const isIng=_fxTipo==='INGRESO';
+
+  if(isIng){
+    // Ingreso USD laboral — registra en FX + entradas
+    const usd_v=parseFloat($('fx-usd-inp').value.replace(/,/g,'.'))||0;
+    const tasa=parseFloat((dbq("SELECT valor FROM config WHERE clave='tasa_usd'")[0]||{valor:4100}).valor);
+    const cat=$('fx-ingreso-cat')?$('fx-ingreso-cat').value:'';
+    if(!fecha||!usd_v){toast('Completa fecha y USD');return;}
+    const cop_eq=Math.round(usd_v*tasa);
+    const d=new Date(fecha+'T12:00:00');
+    const año=d.getFullYear(),mes=d.getMonth()+1,dia=d.getDate();
+    // 1. FX entry
+    S.db.run('INSERT INTO cartera_fx(fecha,año,mes,tipo,cop,tasa_dia,usd,plataforma,notas)VALUES(?,?,?,?,?,?,?,?,?)',
+      [fecha,año,mes,'INGRESO',cop_eq,tasa,usd_v,'Binance',notas]);
+    // 2. entradas entry
+    const orden=(dbq("SELECT COALESCE(MAX(orden),0)+1 AS o FROM entradas WHERE año=? AND mes=? AND dia=?",[año,mes,dia])[0]||{o:1}).o;
+    S.db.run('INSERT INTO entradas(año,mes,dia,categoria,descripcion,valor,moneda,orden)VALUES(?,?,?,?,?,?,?,?)',
+      [año,mes,dia,cat,notas||'Ingreso USD',usd_v,'USD',orden]);
+    markDirty();closeFxSheet();renderFX();renderBalance();pushNow();
+    toast('💰 Ingreso USD registrado');
+    return;
+  }
+
   const cop_v=parseNum($('fx-cop').value);
   const usd_v=parseFloat($('fx-usd-inp').value.replace(/\./g,'').replace(/,/g,'.'))||0;
-  const notas=$('fx-notas').value.trim();
   if(!fecha||!cop_v||!usd_v){toast('Completa fecha, COP y USD');return;}
   if(_fxEditId){
     S.db.run('UPDATE cartera_fx SET fecha=?,tipo=?,cop=?,usd=?,notas=? WHERE id=?',
@@ -2511,6 +2558,7 @@ function renderFX(){
   let tu=0,tc=0,gpReal=0;
   rows.forEach(r=>{
     if(r.tipo==='COMPRA'){tu+=r.usd;tc+=r.cop;}
+    else if(r.tipo==='INGRESO'){tu+=r.usd;}  // ingreso laboral: suma USD sin costo COP
     else{const avg=tu?tc/tu:0;gpReal+=r.cop-r.usd*avg;tu-=r.usd;tc-=r.usd*avg;}
   });
   const tasa=parseFloat((dbq("SELECT valor FROM config WHERE clave='tasa_usd'")[0]||{valor:4100}).valor);
@@ -2545,7 +2593,7 @@ function renderFX(){
     el.style.cssText='align-items:center';
     el.innerHTML=`
       <span style="width:52px;color:var(--text3)">${r.fecha.slice(5)}</span>
-      <span style="width:48px;color:${r.tipo==='COMPRA'?'var(--green)':'var(--red)'}">${r.tipo.toLowerCase()}</span>
+      <span style="width:56px;color:${r.tipo==='COMPRA'?'var(--green)':r.tipo==='INGRESO'?'var(--gold)':'var(--red)'}">${r.tipo==='INGRESO'?'💰 ing':r.tipo.toLowerCase()}</span>
       <span style="flex:1;text-align:right;color:var(--text2)">${cop(r.cop,true)}</span>
       <span style="width:54px;text-align:right;color:var(--teal)">${r.usd.toFixed(1)}</span>
       <span style="width:24px;text-align:right">
