@@ -1,25 +1,4 @@
-<div id="sheet" onclick="if(event.target===this)closeSheet()">
-  <div class="sheet">
-    <div class="sheet-handle"></div>
-    <div class="sheet-hdr-row">
-      <div class="sheet-title" id="sheet-title">Registro rapido</div>
-    </div>
-    <div class="s-row1">
-      <select id="s-cat" class="s-select" onchange="onSheetCatChange(this)"></select>
-      <span id="s-cat-dot" style="width:9px;height:9px;border-radius:50%;background:#4CAF75;flex-shrink:0;display:inline-block;align-self:center;margin:0 3px"></span>
-      <input class="s-inp" id="s-desc" type="text" placeholder="Descripcion..." autocomplete="off">
-    </div>
-    <div class="s-row2">
-      <input class="s-inp s-inp-val" id="s-val" type="text" inputmode="decimal" placeholder="0"
-        oninput="onValInput(event)" onkeydown="if(event.key==='Enter')guardarEntrada()">
-      <div class="s-moneda-toggle">
-        <button class="s-moneda-btn active" id="btn-cop-s" onclick="setSheetMoneda('COP')">COP</button>
-        <button class="s-moneda-btn" id="btn-usd-s" onclick="setSheetMoneda('USD')">USD</button>
-      </div>
-      <button class="s-btn-add" id="s-save-btn" onclick="guardarEntrada()">+ agregar</button>
-    </div>
-  </div>
-</div><!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -1071,20 +1050,23 @@ input,select{font-family:inherit;font-size:inherit;color:inherit}
 <div class="sheet-overlay hidden" id="sheet" onclick="if(event.target===this)closeSheet()">
   <div class="sheet">
     <div class="sheet-handle"></div>
-    <div class="sheet-title" id="sheet-title">Registro rápido</div>
-    <div>
-      <div class="s-lbl">Categoría</div>
-      <div class="cats-wrap" id="cat-pills"></div>
+    <div class="sheet-hdr-row">
+      <div class="sheet-title" id="sheet-title">Registro rápido</div>
     </div>
-    <div>
-      <div class="s-lbl">Descripción</div>
-      <input class="s-inp" id="s-desc" type="text" placeholder="Ej: Windows 11 Pro">
+    <div class="s-row1">
+      <select id="s-cat" class="s-select" onchange="onSheetCatChange(this)"></select>
+      <span id="s-cat-dot" style="width:9px;height:9px;border-radius:50%;background:#4CAF75;flex-shrink:0;display:inline-block;align-self:center;margin:0 3px"></span>
+      <input class="s-inp" id="s-desc" type="text" placeholder="Descripción..." autocomplete="off">
     </div>
-    <div>
-      <div class="s-lbl">Valor</div>
-      <input class="s-inp" id="s-val" type="text" inputmode="numeric" placeholder="0">
+    <div class="s-row2">
+      <input class="s-inp s-inp-val" id="s-val" type="text" inputmode="decimal" placeholder="0"
+        oninput="onValInput(event)" onkeydown="if(event.key==='Enter')guardarEntrada()">
+      <div class="s-moneda-toggle">
+        <button class="s-moneda-btn active" id="btn-cop-s" onclick="setSheetMoneda('COP')">COP</button>
+        <button class="s-moneda-btn" id="btn-usd-s" onclick="setSheetMoneda('USD')">USD</button>
+      </div>
+      <button class="s-btn-add" id="s-save-btn" onclick="guardarEntrada()">+ agregar</button>
     </div>
-    <button class="s-btn" id="s-save-btn" onclick="guardarEntrada()">Guardar registro</button>
   </div>
 </div>
 
@@ -2745,13 +2727,14 @@ async function loadApp(){
   await checkPin();
 }
 
+
 async function init(){
   if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
   await initSQL();
   await new Promise(resolve=>{
     const s=document.createElement('script');
     s.src='https://accounts.google.com/gsi/client';
-    s.onload=resolve;document.head.appendChild(s);
+    s.onload=resolve;s.onerror=resolve;document.head.appendChild(s);
   });
   if(checkStoredToken()){await loadApp();}
   else{
