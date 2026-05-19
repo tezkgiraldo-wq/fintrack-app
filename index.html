@@ -806,18 +806,26 @@ input,select{font-family:inherit;font-size:inherit;color:inherit}
         </div>
 
         <!-- Cuentas editables -->
+        <!-- USD Binance — card destacada full-width -->
+        <div class="card" style="margin-bottom:8px;border-color:var(--teal)33">
+          <div style="font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--teal);margin-bottom:6px">USD Binance</div>
+          <div class="val" id="bal-usd-val" style="color:var(--teal);font-size:18px">$0</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px" id="bal-usd-sub">— USD</div>
+        </div>
+
+        <!-- Banco + Efectivo -->
         <div class="grid2" style="margin-bottom:8px">
           <div class="card">
             <div class="lbl" style="color:#4B9EFF88">Banco</div>
             <input class="bal-edit-inp" id="bal-cuenta-bc" inputmode="numeric" placeholder="0" onblur="saveBalCuenta('cuenta_bc',this.value)" style="color:var(--blue)">
           </div>
           <div class="card">
-            <div class="lbl" style="color:#14B8A688">USD Binance</div>
-            <div class="val" id="bal-usd-val" style="color:var(--teal);font-size:14px">$0</div>
-            <div style="font-size:10px;color:var(--text3)" id="bal-usd-sub">— USD</div>
+            <div class="lbl" style="color:#4CAF7588">Efectivo</div>
+            <input class="bal-edit-inp" id="bal-efectivo" inputmode="numeric" placeholder="0" onblur="saveBalCuenta('efectivo',this.value)" style="color:var(--green)">
           </div>
-          
+        </div>
 
+        <!-- Pendientes + Próx. mes -->
         <div class="grid2" style="margin-bottom:8px">
           <div class="card"><div class="lbl" style="color:var(--red)88">Pendientes por pagar mes</div><div class="val" id="bal-pend" style="color:var(--red);font-size:14px">$0</div></div>
           <div class="card"><div class="lbl" style="color:var(--purple)88">Próx. mes</div><div class="val" id="bal-prox" style="color:var(--purple);font-size:14px">$0</div></div>
