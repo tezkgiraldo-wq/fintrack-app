@@ -1014,11 +1014,11 @@ input,select{font-family:inherit;font-size:inherit;color:inherit}
           <input type="date" id="fx-fecha" class="s-inp">
         </div>
         <div class="grid2" id="fx-cop-row">
-          <div>
+          <div id="fx-cop-div">
             <div class="s-lbl">COP</div>
             <input id="fx-cop" class="s-inp" inputmode="numeric" placeholder="0">
           </div>
-          <div>
+          <div id="fx-usd-div">
             <div class="s-lbl" id="fx-usd-lbl">USD</div>
             <input id="fx-usd-inp" class="s-inp" inputmode="decimal" placeholder="0.00">
           </div>
@@ -2468,9 +2468,13 @@ function setFxTipo(t){
   if(ingBtn)ingBtn.className='fx-type-btn ingreso'+(t==='INGRESO'?' sel-ing':'');
   const isIng=t==='INGRESO';
   const copRow=$('fx-cop-row'),catRow=$('fx-cat-row'),usdLbl=$('fx-usd-lbl');
-  if(copRow)copRow.style.display=isIng?'none':'';
+  const copDiv=$('fx-cop-div');
+  // En INGRESO: ocultar solo COP, mantener USD visible
+  if(copDiv)copDiv.style.display=isIng?'none':'';
+  // Hacer que el USD ocupe todo el ancho en modo ingreso
+  if(copRow)copRow.style.gridTemplateColumns=isIng?'1fr':'1fr 1fr';
   if(catRow){catRow.style.display=isIng?'':'none';if(isIng)pwaLoadFxCats();}
-  if(usdLbl)usdLbl.textContent=isIng?'USD recibidos':'USD';
+  if(usdLbl)usdLbl.textContent=isIng?'Monto USD':'USD';
 }
 
 function pwaLoadFxCats(){
