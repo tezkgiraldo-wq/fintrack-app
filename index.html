@@ -802,12 +802,13 @@ input,select{font-family:inherit;font-size:inherit;color:inherit}
             </button>
           </div>
           <div class="val" id="bal-total" style="color:var(--blue);font-size:24px">$0</div>
+          <div id="bal-total-usd" style="font-size:11px;color:var(--gold);font-family:var(--mono);margin-top:2px"></div>
         </div>
 
         <!-- Cuentas editables -->
         <div class="grid2" style="margin-bottom:8px">
           <div class="card">
-            <div class="lbl" style="color:#4B9EFF88">Cuenta BC</div>
+            <div class="lbl" style="color:#4B9EFF88">Banco</div>
             <input class="bal-edit-inp" id="bal-cuenta-bc" inputmode="numeric" placeholder="0" onblur="saveBalCuenta('cuenta_bc',this.value)" style="color:var(--blue)">
           </div>
           <div class="card">
@@ -815,15 +816,7 @@ input,select{font-family:inherit;font-size:inherit;color:inherit}
             <div class="val" id="bal-usd-val" style="color:var(--teal);font-size:14px">$0</div>
             <div style="font-size:10px;color:var(--text3)" id="bal-usd-sub">— USD</div>
           </div>
-          <div class="card">
-            <div class="lbl" style="color:#F9731688">Arriendo res.</div>
-            <input class="bal-edit-inp" id="bal-arriendo" inputmode="numeric" placeholder="0" onblur="saveBalCuenta('arriendo_reserva',this.value)" style="color:var(--orange)">
-          </div>
-          <div class="card">
-            <div class="lbl" style="color:#4CAF7588">Efectivo</div>
-            <input class="bal-edit-inp" id="bal-efectivo" inputmode="numeric" placeholder="0" onblur="saveBalCuenta('efectivo',this.value)" style="color:var(--green)">
-          </div>
-        </div>
+          
 
         <div class="grid2" style="margin-bottom:8px">
           <div class="card"><div class="lbl" style="color:var(--red)88">Pendientes por pagar mes</div><div class="val" id="bal-pend" style="color:var(--red);font-size:14px">$0</div></div>
@@ -946,14 +939,14 @@ input,select{font-family:inherit;font-size:inherit;color:inherit}
         </div>
         <div class="fx-type-toggle">
           <select id="ts-desde" class="s-inp" onchange="tsCheckTasa()" style="margin:0">
-            <option value="cuenta_bc">Cuenta BC</option>
+            <option value="cuenta_bc">Banco</option>
             <option value="usd_binance">USD Binance</option>
             <option value="efectivo">Efectivo</option>
             <option value="arriendo_reserva">Arriendo res.</option>
           </select>
           <select id="ts-hacia" class="s-inp" onchange="tsCheckTasa()" style="margin:0">
             <option value="usd_binance">USD Binance</option>
-            <option value="cuenta_bc">Cuenta BC</option>
+            <option value="cuenta_bc">Banco</option>
             <option value="efectivo">Efectivo</option>
             <option value="arriendo_reserva">Arriendo res.</option>
           </select>
@@ -2250,9 +2243,8 @@ function renderBalance(){
 
   // Activos
   const cuentaBc=bm.cuenta_bc||0;
-  const arriendo=bm.arriendo_reserva||0;
-  const efectivo=bm.efectivo||0;
-  const activos=cuentaBc+usdCop+arriendo+efectivo;
+    const efectivo=bm.efectivo||0;
+  const activos=cuentaBc+usdCop+efectivo;
 
   // Pago actual mes (gastos fijos pendientes) — con override manual
   const pagos=dbq(`SELECT gf.valor,COALESCE(pf.pagado,0) as pagado FROM gastos_fijos gf
@@ -2281,14 +2273,13 @@ function renderBalance(){
   // ── Actualizar DOM ──
   $('bal-total').textContent=cop(total,true);
   $('bal-total').style.color=total>=0?'var(--blue)':'var(--red)';
+  const usdEl=$('bal-total-usd');if(usdEl)usdEl.textContent=tasa>0?`≈ ${Math.round(total/tasa).toLocaleString('es-CO')} USD`:'';
   $('bal-pend').textContent=cop(pend,true);
   $('bal-prox').textContent=cop(proxMes,true);
 
   // Cuentas editables
   const bcEl=$('bal-cuenta-bc');
   if(bcEl&&document.activeElement!==bcEl) bcEl.value=cuentaBc?Math.round(cuentaBc).toLocaleString('es-CO'):'';
-  const arrEl=$('bal-arriendo');
-  if(arrEl&&document.activeElement!==arrEl) arrEl.value=arriendo?Math.round(arriendo).toLocaleString('es-CO'):'';
   const efEl=$('bal-efectivo');
   if(efEl&&document.activeElement!==efEl) efEl.value=efectivo?Math.round(efectivo).toLocaleString('es-CO'):'';
   // USD (readonly — viene de FX)
@@ -2672,7 +2663,7 @@ function doSearch(){
 }
 
 // ── TRANSFERENCIAS INTERNAS ───────────────────────────────
-const TS_LABEL={cuenta_bc:'Cuenta BC',usd_binance:'USD Binance',efectivo:'Efectivo',arriendo_reserva:'Arriendo res.'};
+const TS_LABEL={cuenta_bc:'Banco',usd_binance:'USD Binance',efectivo:'Efectivo',arriendo_reserva:'Arriendo res.'};
 const TS_COLOR={cuenta_bc:'var(--blue)',usd_binance:'var(--teal)',efectivo:'var(--green)',arriendo_reserva:'var(--orange)'};
 
 function openTransfSheet(){
