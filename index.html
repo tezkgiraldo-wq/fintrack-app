@@ -391,6 +391,10 @@ input,select{font-family:inherit;font-size:inherit;color:inherit}
 .fx-hdr{background:var(--bg);font-size:8px;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3)}
 
 /* ── FAB ── */
+#install-bar{display:none;align-items:center;gap:10px;padding:9px 14px;background:var(--bg2);border-top:1px solid var(--border);flex-shrink:0}
+#install-bar span{flex:1;font-size:12px;color:var(--text2)}
+#install-bar .inst-btn{background:var(--blue);color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer}
+#install-bar .inst-x{background:none;border:none;color:var(--text3);font-size:16px;cursor:pointer;padding:4px}
 .fab{position:fixed;bottom:86px;right:16px;width:48px;height:48px;border-radius:50%;background:var(--blue);display:flex;align-items:center;justify-content:center;font-size:24px;color:#fff;z-index:10}
 
 /* ── NAV ── */
@@ -1000,6 +1004,11 @@ input,select{font-family:inherit;font-size:inherit;color:inherit}
     </div>
   </div>
 
+  <div id="install-bar">
+    <span>📲 Instala FinTrack en tu móvil</span>
+    <button class="inst-btn" onclick="installPWA()">Instalar</button>
+    <button class="inst-x" onclick="dismissInstall()">✕</button>
+  </div>
   <div id="nav">
     <button class="nav-btn active" data-v="inicio" onclick="go('inicio')">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -2720,14 +2729,37 @@ async function loadApp(){
   loadCategorias();
   go('inicio');
   const ld=$('loader');ld.classList.add('out');
-  await new Promise(r=>setTimeout(r,550)); // esperar fadeOut
+  await new Promise(r=>setTimeout(r,550));
   ld.style.display='none';
-
-  // Luego mostrar el PIN
   await checkPin();
 }
 
-
+// PWA INSTALL PROMPT
+let _installPrompt=null;
+window.addEventListener('beforeinstallprompt',e=>{
+  e.preventDefault();
+  _installPrompt=e;
+  if(!localStorage.getItem('ft_install_dismissed')){
+    const bar=$('install-bar');
+    if(bar)bar.style.display='flex';
+  }
+});
+window.addEventListener('appinstalled',()=>{
+  _installPrompt=null;
+  const bar=$('install-bar');if(bar)bar.style.display='none';
+});
+function installPWA(){
+  if(!_installPrompt)return;
+  _installPrompt.prompt();
+  _installPrompt.userChoice.then(r=>{
+    if(r.outcome==='accepted'){const bar=$('install-bar');if(bar)bar.style.display='none';}
+    _installPrompt=null;
+  });
+}
+function dismissInstall(){
+  localStorage.setItem('ft_install_dismissed','1');
+  const bar=$('install-bar');if(bar)bar.style.display='none';
+}
 async function init(){
   if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
   await initSQL();
@@ -2739,7 +2771,7 @@ async function init(){
   if(checkStoredToken()){await loadApp();}
   else{
     $('loader').classList.add('out');
-    setTimeout(()=>{$('loader').style.display='none';$('auth-screen').classList.add('show');},500);
+    setTimeout(()=>{ $('loader').style.display='none';$('auth-screen').classList.add('show');},500);
   }
 }
 init();
