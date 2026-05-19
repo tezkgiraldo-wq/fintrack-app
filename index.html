@@ -545,6 +545,35 @@ input,select{font-family:inherit;font-size:inherit;color:inherit}
 /* ── TOAST ── */
 #toast{position:fixed;bottom:70px;left:50%;transform:translateX(-50%);background:var(--bg2);border:1px solid var(--border2);border-radius:8px;padding:9px 16px;font-size:12px;color:var(--text2);opacity:0;transition:opacity .2s;pointer-events:none;white-space:nowrap;z-index:100}
 #toast.show{opacity:1}
+
+/* ── CATEGORY MODAL ──────────────────────────────────────────────────── */
+#cat-overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);display:flex;align-items:flex-end;z-index:30}
+#cat-overlay.hidden{display:none}
+.cat-sheet{background:var(--bg1);border-radius:16px 16px 0 0;width:100%;max-height:88vh;display:flex;flex-direction:column;padding-bottom:env(safe-area-inset-bottom)}
+.cat-sheet-handle{width:36px;height:4px;background:var(--border2);border-radius:2px;margin:10px auto 6px}
+.cat-sheet-hdr{display:flex;align-items:center;justify-content:space-between;padding:4px 16px 10px;border-bottom:1px solid var(--border);flex-shrink:0}
+.cat-sheet-title{font-size:14px;font-weight:600;letter-spacing:.04em}
+.cat-sheet-body{flex:1;overflow-y:auto;padding:4px 0 8px}
+.cat-sec-lbl{padding:8px 16px 3px;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
+.cat-sec-lbl.ing{color:var(--green)}.cat-sec-lbl.egr{color:var(--red)}
+.cat-row{display:flex;align-items:center;gap:10px;padding:9px 16px;border-bottom:1px solid var(--border)}
+.cat-row:last-child{border-bottom:none}
+.cat-row-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.cat-row-name{flex:1;font-size:13px;color:var(--text)}
+.cat-row-badge{font-size:9px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px}
+.cat-row-edit,.cat-row-del{background:none;border:none;color:var(--text3);font-size:15px;cursor:pointer;padding:4px 6px;border-radius:4px}
+.cat-row-edit:active{color:var(--blue);background:var(--bg3)}
+.cat-row-del:active{color:var(--red);background:var(--bg3)}
+.cat-add-section{flex-shrink:0;padding:12px 16px 16px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:8px}
+.cat-add-sec-lbl{font-size:11px;color:var(--text3)}
+.cat-add-row1{display:flex;gap:6px}
+.cat-add-inp{flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:13px;outline:none;font-family:inherit}
+.cat-add-inp:focus{border-color:var(--blue)}
+.cat-add-tipo{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:8px 8px;color:var(--text);font-size:12px;outline:none;font-family:inherit}
+.cat-palette{display:flex;gap:6px;flex-wrap:wrap;padding:2px 0}
+.cat-swatch{width:22px;height:22px;border-radius:5px;cursor:pointer;border:2px solid transparent;transition:border-color .12s,transform .12s}
+.cat-swatch.sel{border-color:#fff;transform:scale(1.15)}
+.cat-add-btn{background:var(--blue);color:#fff;border:none;border-radius:7px;padding:9px 18px;font-size:13px;font-weight:600;cursor:pointer;align-self:flex-start}
 </style>
 </head>
 <body>
@@ -677,7 +706,7 @@ input,select{font-family:inherit;font-size:inherit;color:inherit}
       <div class="ctrl-mode-bar">
         <button class="ctrl-mode-btn active" id="cm-resumen" onclick="setCtrlMode('resumen')">Resumen</button>
         <button class="ctrl-mode-btn" id="cm-dia" onclick="setCtrlMode('dia')">Por día</button>
-        <button class="ctrl-mode-btn" id="cm-cats" onclick="setCtrlMode('cats')">Categorías →</button>
+        <button class="ctrl-mode-btn" id="cm-cats" onclick="openCatModal()">Categorías →</button>
       </div>
       <!-- KPIs -->
       <div class="ctrl-kpis-bar">
@@ -1071,6 +1100,32 @@ input,select{font-family:inherit;font-size:inherit;color:inherit}
         <button class="s-moneda-btn" id="btn-usd-s" onclick="setSheetMoneda('USD')">USD</button>
       </div>
       <button class="s-btn-add" id="s-save-btn" onclick="guardarEntrada()">+ agregar</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- CATEGORY MODAL -->
+<div class="hidden" id="cat-overlay" onclick="if(event.target===this)closeCatModal()">
+  <div class="cat-sheet">
+    <div class="cat-sheet-handle"></div>
+    <div class="cat-sheet-hdr">
+      <span class="cat-sheet-title">Gestionar categorías</span>
+      <button style="background:none;border:none;color:var(--text3);font-size:18px;cursor:pointer" onclick="closeCatModal()">✕</button>
+    </div>
+    <div class="cat-sheet-body" id="cat-sheet-body"></div>
+    <div class="cat-add-section">
+      <div class="cat-add-sec-lbl">nueva categoría</div>
+      <div class="cat-add-row1">
+        <input class="cat-add-inp" id="new-cat-name" type="text" placeholder="Nombre..." autocomplete="off"
+          onkeydown="if(event.key==='Enter')pwaAddCat()">
+        <select class="cat-add-tipo" id="new-cat-tipo">
+          <option value="ingreso">ingreso</option>
+          <option value="egreso">egreso</option>
+        </select>
+      </div>
+      <div class="cat-palette" id="new-cat-palette"></div>
+      <button class="cat-add-btn" onclick="pwaAddCat()">+ agregar</button>
     </div>
   </div>
 </div>
@@ -2756,6 +2811,77 @@ function dismissInstall(){
   localStorage.setItem('ft_install_dismissed','1');
   const bar=$('install-bar');if(bar)bar.style.display='none';
 }
+// ── CATEGORY MANAGEMENT ──────────────────────────────────────────────────
+const PWA_PALETTE=['#4CAF75','#14B8A6','#4B9EFF','#A855F7','#E05555','#F97316','#E8A838','#EC4899','#6366F1','#0EA5E9','#84CC16','#EF4444'];
+let _newCatColor=PWA_PALETTE[0];
+
+function openCatModal(){
+  $('cat-overlay').classList.remove('hidden');
+  pwaBuildPalette();
+  pwaRenderCatList();
+}
+function closeCatModal(){
+  $('cat-overlay').classList.add('hidden');
+}
+function pwaBuildPalette(){
+  $('new-cat-palette').innerHTML=PWA_PALETTE.map(col=>
+    `<div class="cat-swatch${col===_newCatColor?' sel':''}" style="background:${col}" onclick="pwaSelectColor('${col}')"></div>`
+  ).join('');
+}
+function pwaSelectColor(col){_newCatColor=col;pwaBuildPalette();}
+function pwaRenderCatList(){
+  const ing=S.cats.filter(c=>c.tipo==='ingreso');
+  const egr=S.cats.filter(c=>c.tipo==='egreso');
+  const mkRow=c=>`<div class="cat-row" id="catrow-${c.id}">
+    <div class="cat-row-dot" style="background:${c.color}"></div>
+    <div class="cat-row-name" id="catname-${c.id}">${c.nombre}</div>
+    <span class="cat-row-badge" style="background:${c.tipo==='ingreso'?'var(--green)':'var(--red)'}22;color:${c.tipo==='ingreso'?'var(--green)':'var(--red)'}">${c.tipo}</span>
+    <button class="cat-row-edit" onclick="pwaEditCat(${c.id})" title="Editar">✎</button>
+    <button class="cat-row-del" onclick="pwaDelCat(${c.id})" title="Eliminar">✕</button>
+  </div>`;
+  $('cat-sheet-body').innerHTML=
+    (ing.length?`<div class="cat-sec-lbl ing">ingresos</div>${ing.map(mkRow).join('')}`:'') +
+    (egr.length?`<div class="cat-sec-lbl egr">egresos</div>${egr.map(mkRow).join('')}`:'');
+}
+function pwaEditCat(id){
+  const cat=S.cats.find(c=>c.id===id);if(!cat)return;
+  const nameEl=$('catname-'+id);if(!nameEl)return;
+  nameEl.innerHTML=`<input id="catinp-${id}" type="text" style="background:var(--bg3);border:1px solid var(--blue);border-radius:4px;padding:4px 8px;color:var(--text);font-size:13px;width:140px;outline:none">`;
+  const inp=$('catinp-'+id);if(!inp)return;
+  inp.value=cat.nombre;
+  inp.onblur=()=>pwaSaveCatEdit(id,inp.value);
+  inp.onkeydown=e=>{if(e.key==='Enter')inp.blur();if(e.key==='Escape'){inp.value=cat.nombre;inp.blur();}};
+  setTimeout(()=>{inp.focus();inp.select();},30);
+}
+function pwaSaveCatEdit(id,nombre){
+  nombre=nombre.trim();
+  const cat=S.cats.find(c=>c.id===id);
+  if(!cat||!nombre||nombre===cat.nombre){pwaRenderCatList();return;}
+  S.db.run('UPDATE categorias SET nombre=? WHERE id=?',[nombre,id]);
+  markDirty();loadCategorias();pwaRenderCatList();pushNow();
+  toast('Categoría renombrada');
+}
+function pwaDelCat(id){
+  const cat=S.cats.find(c=>c.id===id);
+  if(!cat)return;
+  if(!confirm(`¿Eliminar "${cat.nombre}"? Los registros existentes no se borran.`))return;
+  S.db.run('UPDATE categorias SET activo=0 WHERE id=?',[id]);
+  markDirty();loadCategorias();pwaRenderCatList();pushNow();
+  toast('Categoría eliminada');
+}
+function pwaAddCat(){
+  const nombre=$('new-cat-name').value.trim();
+  if(!nombre){toast('Escribe el nombre');return;}
+  const tipo=$('new-cat-tipo').value;
+  if(S.cats.find(c=>c.nombre.toLowerCase()===nombre.toLowerCase()&&c.activo!==0)){
+    toast('Ya existe esa categoría');return;
+  }
+  S.db.run('INSERT INTO categorias(nombre,tipo,color,activo)VALUES(?,?,?,1)',[nombre,tipo,_newCatColor]);
+  $('new-cat-name').value='';
+  markDirty();loadCategorias();pwaRenderCatList();pushNow();
+  toast(`Categoría "${nombre}" agregada`);
+}
+
 async function init(){
   if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
   await initSQL();
