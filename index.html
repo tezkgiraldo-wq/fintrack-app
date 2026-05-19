@@ -1041,8 +1041,8 @@ input,select{font-family:inherit;font-size:inherit;color:inherit}
   </div>
 
   <div id="install-bar">
-    <span>📲 Instala FinTrack en tu móvil</span>
-    <button class="inst-btn" onclick="installPWA()">Instalar</button>
+    <span id="install-bar-msg">📲 Instala FinTrack en tu móvil</span>
+    <button class="inst-btn" id="install-bar-btn" onclick="installPWA()">Instalar</button>
     <button class="inst-x" onclick="dismissInstall()">✕</button>
   </div>
   <div id="nav">
@@ -2834,6 +2834,24 @@ async function loadApp(){
 
 // PWA INSTALL PROMPT
 let _installPrompt=null;
+const _isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent)&&!window.MSStream;
+const _isInStandalone=window.navigator.standalone===true||window.matchMedia('(display-mode:standalone)').matches;
+
+function _showInstallBar(){
+  if(_isInStandalone)return; // ya instalada
+  if(localStorage.getItem('ft_install_dismissed'))return;
+  const bar=$('install-bar');if(!bar)return;
+  if(_isIOS){
+    // iOS Safari: beforeinstallprompt no existe — instrucción manual
+    const msg=$('install-bar-msg');
+    const btn=$('install-bar-btn');
+    if(msg)msg.textContent='Instalar: toca Compartir ↗ → "Agregar a inicio"';
+    if(btn)btn.style.display='none';
+    bar.style.display='flex';
+  }
+  // Android/Chrome: espera beforeinstallprompt
+}
+
 window.addEventListener('beforeinstallprompt',e=>{
   e.preventDefault();
   _installPrompt=e;
@@ -2847,7 +2865,8 @@ window.addEventListener('appinstalled',()=>{
   const bar=$('install-bar');if(bar)bar.style.display='none';
 });
 function installPWA(){
-  if(!_installPrompt)return;
+  if(_isIOS)return; // iOS: el botón está oculto, no pasa nada
+  if(!_installPrompt){toast('Abre desde Chrome para instalar');return;}
   _installPrompt.prompt();
   _installPrompt.userChoice.then(r=>{
     if(r.outcome==='accepted'){const bar=$('install-bar');if(bar)bar.style.display='none';}
@@ -2858,6 +2877,8 @@ function dismissInstall(){
   localStorage.setItem('ft_install_dismissed','1');
   const bar=$('install-bar');if(bar)bar.style.display='none';
 }
+// Mostrar en load
+window.addEventListener('load',()=>setTimeout(_showInstallBar,1200));
 // ── CATEGORY MANAGEMENT ──────────────────────────────────────────────────
 const PWA_PALETTE=['#4CAF75','#14B8A6','#4B9EFF','#A855F7','#E05555','#F97316','#E8A838','#EC4899','#6366F1','#0EA5E9','#84CC16','#EF4444'];
 let _newCatColor=PWA_PALETTE[0];
