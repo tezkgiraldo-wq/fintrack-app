@@ -391,10 +391,23 @@ input,select{font-family:inherit;font-size:inherit;color:inherit}
 .fx-hdr{background:var(--bg);font-size:8px;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3)}
 
 /* ── FAB ── */
-#install-bar{display:none;align-items:center;gap:10px;padding:9px 14px;background:var(--bg2);border-top:1px solid var(--border);flex-shrink:0}
-#install-bar span{flex:1;font-size:12px;color:var(--text2)}
-#install-bar .inst-btn{background:var(--blue);color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer}
-#install-bar .inst-x{background:none;border:none;color:var(--text3);font-size:16px;cursor:pointer;padding:4px}
+#install-bar{
+  display:none;position:fixed;top:14px;left:50%;transform:translateX(-50%);
+  z-index:9999;width:calc(100% - 32px);max-width:400px;
+  background:var(--bg2);border:1px solid var(--blue)44;
+  border-radius:16px;padding:16px;
+  box-shadow:0 8px 32px rgba(0,0,0,0.6),0 0 0 1px var(--blue)22;
+  flex-direction:column;gap:12px;
+  animation:slideDown .3s cubic-bezier(.2,.8,.3,1)}
+@keyframes slideDown{from{opacity:0;transform:translateX(-50%) translateY(-20px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+#install-bar-top{display:flex;align-items:center;gap:12px}
+#install-bar-icon{width:48px;height:48px;border-radius:12px;flex-shrink:0;background:var(--bg3);border:1px solid var(--border)}
+#install-bar-info{flex:1;min-width:0}
+#install-bar .inst-x{background:none;border:none;color:var(--text3);font-size:18px;cursor:pointer;padding:4px;flex-shrink:0;align-self:flex-start}
+#install-bar span{display:block;font-size:13px;font-weight:600;color:var(--text)}
+#install-bar-sub{font-size:11px;color:var(--text3);margin-top:2px}
+#install-bar .inst-btn{width:100%;background:var(--blue);color:#fff;border:none;border-radius:10px;padding:11px;font-size:14px;font-weight:700;cursor:pointer;letter-spacing:0.02em}
+#install-bar .inst-btn:active{opacity:.85}
 .fab{position:fixed;bottom:86px;right:16px;width:48px;height:48px;border-radius:50%;background:var(--blue);display:flex;align-items:center;justify-content:center;font-size:24px;color:#fff;z-index:10}
 
 /* ── NAV ── */
@@ -1041,9 +1054,15 @@ input,select{font-family:inherit;font-size:inherit;color:inherit}
   </div>
 
   <div id="install-bar">
-    <span id="install-bar-msg">📲 Instala FinTrack en tu móvil</span>
-    <button class="inst-btn" id="install-bar-btn" onclick="installPWA()">Instalar</button>
-    <button class="inst-x" onclick="dismissInstall()">✕</button>
+    <div id="install-bar-top">
+      <img id="install-bar-icon" src="icon-192.png" alt="FinTrack">
+      <div id="install-bar-info">
+        <span id="install-bar-msg">Instala FinTrack</span>
+        <div id="install-bar-sub">Acceso rápido · funciona sin conexión</div>
+      </div>
+      <button class="inst-x" onclick="dismissInstall()">✕</button>
+    </div>
+    <button class="inst-btn" id="install-bar-btn" onclick="installPWA()">📲 Agregar a inicio</button>
   </div>
   <div id="nav">
     <button class="nav-btn active" data-v="inicio" onclick="go('inicio')">
