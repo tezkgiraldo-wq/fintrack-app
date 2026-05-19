@@ -1,25 +1,4 @@
-<div id="sheet" onclick="if(event.target===this)closeSheet()">
-  <div class="sheet">
-    <div class="sheet-handle"></div>
-    <div class="sheet-hdr-row">
-      <div class="sheet-title" id="sheet-title">Registro rapido</div>
-    </div>
-    <div class="s-row1">
-      <select id="s-cat" class="s-select" onchange="onSheetCatChange(this)"></select>
-      <span id="s-cat-dot" style="width:9px;height:9px;border-radius:50%;background:#4CAF75;flex-shrink:0;display:inline-block;align-self:center;margin:0 3px"></span>
-      <input class="s-inp" id="s-desc" type="text" placeholder="Descripcion..." autocomplete="off">
-    </div>
-    <div class="s-row2">
-      <input class="s-inp s-inp-val" id="s-val" type="text" inputmode="decimal" placeholder="0"
-        oninput="onValInput(event)" onkeydown="if(event.key==='Enter')guardarEntrada()">
-      <div class="s-moneda-toggle">
-        <button class="s-moneda-btn active" id="btn-cop-s" onclick="setSheetMoneda('COP')">COP</button>
-        <button class="s-moneda-btn" id="btn-usd-s" onclick="setSheetMoneda('USD')">USD</button>
-      </div>
-      <button class="s-btn-add" id="s-save-btn" onclick="guardarEntrada()">+ agregar</button>
-    </div>
-  </div>
-</div><!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -46,59 +25,6 @@
 html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13px;overflow:hidden;overscroll-behavior:none}
 ::-webkit-scrollbar{width:3px}
 ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
-/* ── DIARIO HEATMAP ─────────────────────────────────────── */
-#v-diario{display:flex;flex-direction:column;overflow:hidden;position:relative;height:100%}
-.pdiario-kpis{display:flex;gap:5px;padding:8px 10px 4px;flex-shrink:0}
-.pkpi{flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:7px;padding:7px 8px}
-.pkpi-lbl{font-size:9px;letter-spacing:.07em;text-transform:uppercase;color:var(--text3);margin-bottom:2px}
-.pkpi-val{font-family:var(--mono);font-size:14px;font-weight:600}
-.pkpi-usd{font-size:9px;color:var(--gold);font-family:var(--mono);margin-top:1px}
-.pdiario-wrap{flex:1;overflow-y:auto;min-height:0;padding:4px 6px 8px}
-.pcal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
-.pcal-hdr{font-size:9px;text-align:center;padding:3px 0;color:var(--text3);letter-spacing:.05em}
-.pcal-day{min-height:46px;border-radius:5px;border:1px solid transparent;background:var(--bg2);
-  padding:4px 3px 3px;display:flex;flex-direction:column;cursor:pointer;transition:filter .1s}
-.pcal-day:active{filter:brightness(1.2)}
-.pcal-day.empty{background:transparent;pointer-events:none}
-.pcal-day.today{border-color:var(--blue)!important;box-shadow:inset 0 0 0 1px var(--blue)44}
-.pcal-day.selected{border-color:var(--blue)!important;box-shadow:inset 0 0 0 2px var(--blue)66}
-.pcal-num{font-size:9px;font-family:var(--mono);color:rgba(232,228,220,.4);align-self:flex-end;line-height:1}
-.pcal-day.today .pcal-num{color:var(--blue);font-weight:700;opacity:1}
-.pcal-bal{font-size:10px;font-weight:700;font-family:var(--mono);line-height:1;margin-top:auto;padding-top:2px}
-.pcal-micro{display:flex;justify-content:space-between;font-size:7px;font-family:var(--mono);margin-top:1px;opacity:.8}
-/* Day panel */
-.pday-panel{position:absolute;bottom:0;left:0;right:0;background:var(--bg1);
-  border-top:2px solid var(--border);max-height:46%;overflow-y:auto;z-index:20;
-  transition:transform .2s ease}
-.pday-panel.hidden{display:none}
-.pday-hdr{display:flex;align-items:center;gap:6px;padding:9px 12px;
-  border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg1);z-index:1}
-.pday-title{font-family:var(--mono);font-size:12px;font-weight:600;flex:1}
-.pday-sums{display:flex;gap:5px;font-size:10px;font-family:var(--mono)}
-.pday-close{color:var(--text3);font-size:13px;padding:2px 4px}
-.pday-nueva{padding:5px 10px;background:var(--blue);color:#fff;border-radius:5px;font-size:11px;white-space:nowrap}
-.pday-entries{}
-.pday-entry{display:flex;align-items:center;gap:5px;padding:7px 12px;border-bottom:1px solid var(--border)}
-.pday-cat{font-size:8px;padding:2px 5px;border-radius:3px;font-weight:600;white-space:nowrap;flex-shrink:0}
-.pday-desc{flex:1;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)}
-.pday-val{font-size:11px;font-family:var(--mono);font-weight:600;white-space:nowrap}
-.pday-usd{font-size:8px;color:var(--gold);font-family:var(--mono);white-space:nowrap}
-.pday-del{color:var(--text3);font-size:11px;padding:2px 4px;flex-shrink:0}
-.pday-empty{padding:14px;text-align:center;color:var(--text3);font-size:11px}
-/* Sheet redesign */
-.sheet-hdr-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
-.s-row1,.s-row2{display:flex;gap:6px;align-items:center;margin-bottom:8px}
-.s-select{flex:0 0 auto;min-width:120px;background:var(--bg3);border:1px solid var(--border2);
-  border-radius:6px;padding:8px 10px;color:var(--text);font-size:12px;outline:none;font-family:inherit}
-.s-row1 .s-inp{flex:1;min-width:0}
-.s-inp-val{flex:1;font-family:var(--mono);text-align:right;min-width:0}
-.s-moneda-toggle{display:flex;border-radius:6px;overflow:hidden;border:1px solid var(--border2);flex-shrink:0}
-.s-moneda-btn{padding:7px 10px;font-size:11px;font-family:var(--mono);background:var(--bg3);
-  color:var(--text3);border:none;cursor:pointer;transition:background .1s}
-.s-moneda-btn.active{background:var(--gold);color:#000;font-weight:600}
-.s-btn-add{padding:8px 14px;border-radius:6px;background:var(--blue);color:#fff;
-  font-size:12px;font-weight:600;white-space:nowrap;border:none;cursor:pointer;flex-shrink:0}
-
 button{cursor:pointer;border:none;font-family:inherit;font-size:inherit;color:inherit;background:none}
 input,select{font-family:inherit;font-size:inherit;color:inherit}
 
@@ -680,16 +606,7 @@ input,select{font-family:inherit;font-size:inherit;color:inherit}
     </div>
 
     <!-- CONTROL -->
-    
-    <!-- CONTROL DIARIO -->
-    <div class="view" id="v-diario">
-      <div class="pdiario-kpis" id="pdiario-kpis"></div>
-      <div class="pdiario-wrap" id="pdiario-cal-wrap">
-        <div class="pcal-grid" id="pcal-grid"></div>
-      </div>
-      <div class="pday-panel hidden" id="pday-panel"></div>
-    </div>
-<div class="view" id="v-control">
+    <div class="view" id="v-control">
       <!-- Modo toggle -->
       <div class="ctrl-mode-bar">
         <button class="ctrl-mode-btn active" id="cm-resumen" onclick="setCtrlMode('resumen')">Resumen</button>
@@ -1028,10 +945,6 @@ input,select{font-family:inherit;font-size:inherit;color:inherit}
       </svg>
       <div>inicio</div>
     </button>
-      <button class="nav-btn" data-v="diario" onclick="go('diario')">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><rect x="7" y="14" width="3" height="3" rx=".5" fill="currentColor" stroke="none"/><rect x="11" y="14" width="3" height="3" rx=".5" fill="currentColor" stroke="none"/></svg>
-        <span>diario</span>
-      </button>
     <button class="nav-btn" data-v="control" onclick="go('control')">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
         <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
@@ -1113,38 +1026,12 @@ const CLIENT_ID='489523283064-5so7stiraf7o8642b2nuufdgshku00sm.apps.googleuserco
 const SCOPES='https://www.googleapis.com/auth/drive.file';
 const FOLDER_NAME='FinTrack Backups';
 const MESES=['','Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-let CATS=[];
-let CAT_COLOR={};
-function loadCategorias(){
-  const cats=dbq('SELECT * FROM categorias WHERE activo=1 ORDER BY tipo DESC,id');
-  S.cats=cats;
-  CATS=cats.map(c=>c.nombre);
-  CAT_COLOR={};
-  cats.forEach(c=>{CAT_COLOR[c.nombre]=c.color;});
-  const egrNombres=cats.filter(c=>c.tipo==='egreso').map(c=>"'"+c.nombre.replace(/'/g,"''")+"'").join(',');
-  S.egrSQL=egrNombres?`(${egrNombres})`:"('')";
-  const tasCfg=dbq("SELECT valor FROM config WHERE clave='tasa_usd'")[0];
-  S.tasa=tasCfg?parseFloat(tasCfg.valor):4100;
-  if(!CATS.includes(S.activeCat))S.activeCat=CATS[0]||'';
-}
-// Category type helpers
-const isEgr=cat=>!!(S.cats&&S.cats.find(c=>c.nombre===cat&&c.tipo==='egreso'));
-const _cop=(v,moneda,tasa)=>moneda==='USD'?parseFloat(v||0)*parseFloat(tasa):parseFloat(v||0);
-function onValInput(e){
-  const el=e.target;
-  const raw=el.value.replace(/[^\d]/g,'');
-  if(!raw){el.value='';return;}
-  const fmt=parseInt(raw,10).toString().replace(/\B(?=(\d{3})+(?!\d))/g,'.');
-  const diff=fmt.length-el.value.length;
-  const pos=Math.max(0,(el.selectionStart||0)+diff);
-  el.value=fmt;
-  try{el.setSelectionRange(pos,pos);}catch(_){}
-}
+const CATS=['Formatos','Mantenimientos','Partes/Compus','Programas','Otros','Egresos'];
+const CAT_COLOR={'Formatos':'#4B9EFF','Mantenimientos':'#A855F7','Partes/Compus':'#14B8A6','Programas':'#F97316','Otros':'#4CAF75','Egresos':'#E05555'};
 const now=new Date();
-let S={año:now.getFullYear(),mes:now.getMonth()+1,activeView:'inicio',activeCat:'',
+let S={año:now.getFullYear(),mes:now.getMonth()+1,activeView:'inicio',activeCat:'Formatos',
        accessToken:null,folderId:null,SQL:null,db:null,dirty:false,lastSync:null,
-       calSelectedDay:null,editingEntry:null,
-       cats:[],tasa:4100,sheetMoneda:'COP',egrSQL:"('')"};
+       calSelectedDay:null,editingEntry:null};
 
 const $=id=>document.getElementById(id);
 const cop=(v,z=false)=>{
@@ -1380,26 +1267,13 @@ function initSchema(){
     );
     CREATE TABLE IF NOT EXISTS config(clave TEXT PRIMARY KEY,valor TEXT);
     CREATE TABLE IF NOT EXISTS balance_personal(clave TEXT PRIMARY KEY,valor REAL DEFAULT 0);
-    CREATE TABLE IF NOT EXISTS categorias(
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      nombre TEXT NOT NULL UNIQUE,
-      tipo TEXT NOT NULL DEFAULT 'ingreso',
-      color TEXT DEFAULT '#4B9EFF',
-      activo INTEGER DEFAULT 1
-    );
   `);
-  // Migration: add moneda to entradas
-  try { S.db.run("ALTER TABLE entradas ADD COLUMN moneda TEXT DEFAULT 'COP'"); } catch(e){}
-  // Seed tasa default
-  S.db.run("INSERT OR IGNORE INTO config(clave,valor) VALUES('tasa_usd','4100')");
-  // Seed categorias
-  const catCnt=S.db.exec("SELECT COUNT(*) FROM categorias")[0].values[0][0];
-  if(!catCnt){
-    [['Sueldo','ingreso','#4CAF75'],['Freelance','ingreso','#14B8A6'],
-     ['Otros ingresos','ingreso','#4B9EFF'],['Alimentación','egreso','#E05555'],
-     ['Transporte','egreso','#F97316'],['Vivienda','egreso','#A855F7'],
-     ['Salud','egreso','#E8A838'],['Otros gastos','egreso','#E05555']
-    ].forEach(([n,t,col])=>S.db.run("INSERT INTO categorias(nombre,tipo,color)VALUES(?,?,?)",[n,t,col]));
+  const cnt=S.db.exec("SELECT COUNT(*) FROM gastos_fijos")[0].values[0][0];
+  if(!cnt){
+    [['Movistar',133000],['Celular',45000],['Arriendo',500000],['Energía',140000],
+     ['Gas',20000],['Gym',75000],['Funeraria',17000],['Agua',70000],
+     ['Tarjeta NU',300000],['Sansita',100000],['Seguro moto',120000]
+    ].forEach(([d,v])=>S.db.run("INSERT INTO gastos_fijos(descripcion,valor)VALUES(?,?)",[d,v]));
   }
   ['cuenta_bc','efectivo','arriendo_reserva'].forEach(k=>
     S.db.run("INSERT OR IGNORE INTO balance_personal VALUES(?,0)",[k]));
@@ -1596,118 +1470,6 @@ async function checkPin(){
   });
 }
 
-
-// ── CONTROL DIARIO — heatmap calendar ──────────────────────────────
-function renderDiario(){
-  const daysInMonth=new Date(S.año,S.mes,0).getDate();
-  const firstDay=new Date(S.año,S.mes-1,1).getDay();
-  const startOffset=(firstDay+6)%7;
-
-  const rows=dbq(`SELECT dia,categoria,COALESCE(moneda,'COP') as moneda,SUM(valor) as total
-    FROM entradas WHERE año=? AND mes=? GROUP BY dia,categoria,moneda`,[S.año,S.mes]);
-  const egrSet=new Set(S.cats.filter(c=>c.tipo==='egreso').map(c=>c.nombre));
-  const totales={};
-  rows.forEach(r=>{
-    if(!totales[r.dia])totales[r.dia]={ingresos:0,egresos:0,usd_ing:0,usd_egr:0};
-    const cv=_cop(r.total,r.moneda,S.tasa);
-    if(egrSet.has(r.categoria)){totales[r.dia].egresos+=cv;if(r.moneda==='USD')totales[r.dia].usd_egr+=r.total;}
-    else{totales[r.dia].ingresos+=cv;if(r.moneda==='USD')totales[r.dia].usd_ing+=r.total;}
-  });
-  let mIng=0,mEgr=0,mUI=0,mUE=0;
-  Object.values(totales).forEach(t=>{mIng+=t.ingresos;mEgr+=t.egresos;mUI+=t.usd_ing;mUE+=t.usd_egr;});
-  const mBal=mIng-mEgr;
-
-  let _maxI=0,_maxE=0;
-  for(let d=1;d<=daysInMonth;d++){const t=totales[d]||{};if((t.ingresos||0)>_maxI)_maxI=t.ingresos||0;if((t.egresos||0)>_maxE)_maxE=t.egresos||0;}
-
-  const fmtK=v=>'$'+(v>=1000?(v/1000).toLocaleString('es-CO',{maximumFractionDigits:1})+'k':v.toLocaleString('es-CO',{maximumFractionDigits:0}));
-  const today=new Date();const isCurMes=today.getFullYear()===S.año&&today.getMonth()+1===S.mes;
-
-  // KPIs
-  const kpis=$('pdiario-kpis');
-  const uBalStr=mUI-mUE!==0?`<div class="pkpi-usd">${mUI-mUE>=0?'+':''}$${Math.abs(mUI-mUE).toFixed(2)} USD</div>`:'';
-  kpis.innerHTML=
-    `<div class="pkpi"><div class="pkpi-lbl">ingresos</div><div class="pkpi-val" style="color:var(--green)">${cop(mIng,true)}</div>${mUI>0?`<div class="pkpi-usd">+$${mUI.toFixed(2)} USD</div>`:''}</div>`+
-    `<div class="pkpi"><div class="pkpi-lbl">egresos</div><div class="pkpi-val" style="color:var(--red)">${cop(mEgr,true)}</div>${mUE>0?`<div class="pkpi-usd">-$${mUE.toFixed(2)} USD</div>`:''}</div>`+
-    `<div class="pkpi"><div class="pkpi-lbl">balance</div><div class="pkpi-val" style="color:${mBal>=0?'var(--blue)':'var(--red)'}">${cop(mBal,true)}</div>${uBalStr}</div>`;
-
-  // Calendar cells
-  const grid=$('pcal-grid');
-  const hdrs=['lun','mar','mi\xe9','jue','vie','s\xe1b','dom'].map(d=>`<div class="pcal-hdr">${d}</div>`).join('');
-  const empties=Array(startOffset).fill('<div class="pcal-day empty"></div>').join('');
-  let cells='';
-  for(let d=1;d<=daysInMonth;d++){
-    const t=totales[d]||{};
-    const ing=t.ingresos||0,egr=t.egresos||0,bal=ing-egr;
-    const hasData=ing>0||egr>0;
-    const isToday=isCurMes&&d===today.getDate();
-    const isSel=S.calSelectedDay===d;
-    let cs='background:var(--bg2)';
-    if(hasData){
-      const B=0.07,R=0.58;
-      if(ing>0&&egr===0){const a=(B+(ing/(_maxI||1))*R).toFixed(2);cs=`background:rgba(76,175,117,${a});border-color:rgba(76,175,117,${(+a+.15).toFixed(2)})`;}
-      else if(egr>0&&ing===0){const a=(B+(egr/(_maxE||1))*R).toFixed(2);cs=`background:rgba(224,85,85,${a});border-color:rgba(224,85,85,${(+a+.15).toFixed(2)})`;}
-      else if(ing>=egr){const a=(B+(bal/(_maxI||1))*R*.8).toFixed(2);cs=`background:rgba(76,175,117,${a});border-color:rgba(76,175,117,${(+a+.12).toFixed(2)})`;}
-      else{const a=(B+(-bal/(_maxE||1))*R*.8).toFixed(2);cs=`background:rgba(232,168,56,${a});border-color:rgba(232,168,56,${(+a+.12).toFixed(2)})`;}
-    }
-    const bc=!hasData?'var(--text3)':bal>0?'rgba(76,175,117,.95)':bal<0?'rgba(224,85,85,.95)':'var(--text3)';
-    cells+=`<div class="pcal-day${isToday?' today':''}${isSel?' selected':''}" style="${cs}" onclick="selectDiaDiario(${d})">
-      <div class="pcal-num">${d}</div>
-      ${hasData?`<div class="pcal-bal" style="color:${bc}">${fmtK(Math.abs(bal))}</div><div class="pcal-micro">${ing>0?`<span style="color:rgba(76,175,117,.8)">+${fmtK(ing)}</span>`:'<span></span>'}${egr>0?`<span style="color:rgba(224,85,85,.8)">-${egr>0?fmtK(egr):''}</span>`:''}  </div>`:''}
-    </div>`;
-  }
-  grid.innerHTML=hdrs+empties+cells;
-}
-
-function selectDiaDiario(d){
-  if(S.calSelectedDay===d){closeDayPanel();return;}
-  S.calSelectedDay=d;
-  renderDiario();
-  renderDayPanel(d);
-}
-
-function renderDayPanel(dia){
-  const panel=$('pday-panel');if(!panel)return;
-  panel.classList.remove('hidden');
-  const entries=dbq(`SELECT e.*,COALESCE(e.moneda,'COP') as moneda FROM entradas e
-    WHERE e.ano=? AND e.mes=? AND e.dia=? ORDER BY e.id`,[S.año,S.mes,dia]);
-  const egrSet=new Set(S.cats.filter(c=>c.tipo==='egreso').map(c=>c.nombre));
-  let dI=0,dE=0;
-  entries.forEach(e=>{const v=_cop(e.valor,e.moneda,S.tasa);if(egrSet.has(e.categoria))dE+=v;else dI+=v;});
-  const dB=dI-dE;
-  const MN=['','ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
-  panel.innerHTML=`<div class="pday-hdr">
-    <div class="pday-title">${dia} ${MN[S.mes]} ${S.año}</div>
-    <div class="pday-sums">${dI>0?`<span style="color:var(--green)">+${cop(dI)}</span>`:''}${dE>0?`<span style="color:var(--red)">-${cop(dE)}</span>`:''}${(dI>0||dE>0)?`<span style="color:${dB>=0?'var(--blue)':'var(--red)'}">${cop(dB)}</span>`:''}</div>
-    <button class="pday-close" onclick="closeDayPanel()">&#x2715;</button>
-    <button class="pday-nueva" onclick="openSheet(false,${dia})">+ nueva</button>
-  </div>
-  <div class="pday-entries">${entries.length?entries.map(e=>{
-    const cat=S.cats.find(ct=>ct.nombre===e.categoria)||{color:'#666',tipo:'ingreso'};
-    const isEgrE=egrSet.has(e.categoria);
-    const valCop=_cop(e.valor,e.moneda,S.tasa);
-    return `<div class="pday-entry">
-      <span class="pday-cat" style="background:${cat.color}22;color:${cat.color}">${e.categoria}</span>
-      <span class="pday-desc">${e.descripcion||'—'}</span>
-      <span class="pday-val" style="color:${isEgrE?'var(--red)':'var(--green)'}">${isEgrE?'-':'+'}${cop(valCop)}</span>
-      ${e.moneda==='USD'?`<span class="pday-usd">$${parseFloat(e.valor).toFixed(2)} USD</span>`:''}
-      <button class="pday-del" onclick="delDayEntry(${e.id},${dia})">&#x2715;</button>
-    </div>`;}).join(''):`<div class="pday-empty">Sin entradas — agrega la primera</div>`}</div>`;
-}
-
-function closeDayPanel(){
-  S.calSelectedDay=null;
-  const panel=$('pday-panel');if(panel)panel.classList.add('hidden');
-  renderDiario();
-}
-
-function delDayEntry(id,dia){
-  S.db.run('DELETE FROM entradas WHERE id=?',[id]);
-  markDirty();scheduleSave();
-  renderDayPanel(dia);
-  renderDiario();
-}
-
 // NAVIGATION
 function go(v){
   S.activeView=v;
@@ -1718,13 +1480,12 @@ function go(v){
   const btn=document.querySelector(`[data-v="${v}"]`);
   if(btn) btn.classList.add('active');
   // FAB solo en inicio y control
-  $('fab').style.display=(v==='inicio'||v==='diario'||v==='control')?'flex':'none';
+  $('fab').style.display=(v==='inicio'||v==='control')?'flex':'none';
   refreshView();
 }
 function refreshView(){
   const v=S.activeView;
   if(v==='inicio')renderInicio();
-  if(v==='diario')renderDiario();
   if(v==='control')renderControl();
   if(v==='fijos')renderFijos();
   if(v==='balance')renderBalance();
@@ -1741,8 +1502,8 @@ function renderInicio(){
 
   const entries=dbq(`SELECT id,categoria,descripcion,valor,orden FROM entradas
     WHERE año=? AND mes=? AND dia=? ORDER BY categoria,orden`,[S.año,S.mes,dia]);
-  const totIng=entries.filter(e=>!isEgr(e.categoria)).reduce((a,e)=>a+e.valor,0);
-  const totEgr=entries.filter(e=>isEgr(e.categoria)).reduce((a,e)=>a+e.valor,0);
+  const totIng=entries.filter(e=>e.categoria!=='Egresos').reduce((a,e)=>a+e.valor,0);
+  const totEgr=entries.filter(e=>e.categoria==='Egresos').reduce((a,e)=>a+e.valor,0);
   const tot=totIng-totEgr;
   $('hoy-sub').textContent=entries.length?`${entries.length} registro${entries.length>1?'s':''}  ·  mantén para editar · desliza para eliminar`:'Sin registros hoy';
   $('hoy-total').textContent=cop(tot,true);
@@ -1752,8 +1513,8 @@ function renderInicio(){
 
   // Resumen mes
   const res=dbq(`SELECT
-    COALESCE(SUM(CASE WHEN categoria NOT IN ${S.egrSQL} THEN valor ELSE 0 END),0) as ing,
-    COALESCE(SUM(CASE WHEN categoria IN ${S.egrSQL} THEN valor ELSE 0 END),0) as egr
+    COALESCE(SUM(CASE WHEN categoria!='Egresos' THEN valor ELSE 0 END),0) as ing,
+    COALESCE(SUM(CASE WHEN categoria='Egresos' THEN valor ELSE 0 END),0) as egr
     FROM entradas WHERE año=? AND mes=?`,[S.año,S.mes])[0]||{ing:0,egr:0};
   const bal=res.ing-res.egr;
   $('m-ing').textContent=cop(res.ing,true);
@@ -1773,7 +1534,7 @@ function renderEntries(container, entries, año, mes, dia, onRefresh){
   }
   entries.forEach(e=>{
     const clr=CAT_COLOR[e.categoria]||'#999';
-    const isEgr=isEgr(e.categoria);
+    const isEgr=e.categoria==='Egresos';
     const valColor=isEgr?'var(--red)':clr;
     const item=document.createElement('div');
     item.className='reg-item';
@@ -1899,8 +1660,8 @@ function renderCalendar(){
 
   // Días con data
   const diasData=dbq(`SELECT dia,
-    COALESCE(SUM(CASE WHEN categoria NOT IN ${S.egrSQL} THEN valor ELSE 0 END),0) as ing,
-    COALESCE(SUM(CASE WHEN categoria IN ${S.egrSQL} THEN valor ELSE 0 END),0) as egr
+    COALESCE(SUM(CASE WHEN categoria!='Egresos' THEN valor ELSE 0 END),0) as ing,
+    COALESCE(SUM(CASE WHEN categoria='Egresos' THEN valor ELSE 0 END),0) as egr
     FROM entradas WHERE año=? AND mes=? GROUP BY dia`,[S.año,S.mes]);
   const dataMap={};diasData.forEach(r=>dataMap[r.dia]=r);
 
@@ -1967,8 +1728,8 @@ function renderCalDayEntries(dia){
   const dow=new Date(S.año,S.mes-1,dia).getDay();
   $('cal-sel-lbl').textContent=`${diasSemana[dow]} ${dia}`;
   wrap.style.display='block';
-  const totIng=entries.filter(e=>!isEgr(e.categoria)).reduce((a,e)=>a+e.valor,0);
-  const totEgr=entries.filter(e=>isEgr(e.categoria)).reduce((a,e)=>a+e.valor,0);
+  const totIng=entries.filter(e=>e.categoria!=='Egresos').reduce((a,e)=>a+e.valor,0);
+  const totEgr=entries.filter(e=>e.categoria==='Egresos').reduce((a,e)=>a+e.valor,0);
   const tot=totIng-totEgr;
   wrap.innerHTML=`
     <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-bottom:1px solid var(--border)">
@@ -2014,8 +1775,8 @@ function renderControl(){
     if(!map[r.dia])map[r.dia]={};
     map[r.dia][r.categoria]=r.total;
   });
-  const tI=rows.filter(r=>!isEgr(r.categoria)).reduce((a,r)=>a+r.total,0);
-  const tE=rows.filter(r=>isEgr(r.categoria)).reduce((a,r)=>a+r.total,0);
+  const tI=rows.filter(r=>r.categoria!=='Egresos').reduce((a,r)=>a+r.total,0);
+  const tE=rows.filter(r=>r.categoria==='Egresos').reduce((a,r)=>a+r.total,0);
   const tB=tI-tE;
   $('c-ing').textContent=cop(tI,true)||'$0';
   $('c-egr').textContent=cop(tE,true)||'$0';
@@ -2028,7 +1789,7 @@ function renderControl(){
   for(let d=1;d<=dim;d++){
     const cats=map[d]||null;
     let ing=0,egr=0;
-    if(cats){Object.entries(cats).forEach(([cat,v])=>{if(isEgr(cat))egr+=v;else ing+=v;});}
+    if(cats){Object.entries(cats).forEach(([cat,v])=>{if(cat==='Egresos')egr+=v;else ing+=v;});}
     const bal=ing-egr;
     const tr=document.createElement('tr');
     if(cats) tr.onclick=()=>{_ctrlDia=d;setCtrlMode('dia');};
@@ -2065,7 +1826,7 @@ function renderCtrlDia(dia){
   CATS.forEach(cat=>{
     if(!byCat[cat])return;
     const color=CAT_COLOR[cat];
-    const isEgr=isEgr(cat);
+    const isEgr=cat==='Egresos';
     const total=byCat[cat].reduce((a,r)=>a+r.valor,0);
     const section=document.createElement('div');
     section.className='ctrl-dia-section';
@@ -2106,17 +1867,17 @@ function renderCtrlCats(){
     const cells=CATS.map(cat=>{
       const v=cats[cat]||0;
       totCat[cat]+=v;
-      rowBal+=isEgr(cat)?-v:v;
-      return v?`<td class="${isEgr(cat)?'v-egr':'v-ing'}">${cop(v)}</td>`:`<td>—</td>`;
+      rowBal+=cat==='Egresos'?-v:v;
+      return v?`<td class="${cat==='Egresos'?'v-egr':'v-ing'}">${cop(v)}</td>`:`<td>—</td>`;
     }).join('');
     const tr=document.createElement('tr');
     tr.innerHTML=`<td style="cursor:pointer" onclick="_ctrlDia=${d};setCtrlMode('dia')">${d}</td>${cells}<td class="${rowBal>=0?'v-pos':'v-neg'}">${cop(rowBal,true)}</td>`;
     tb.appendChild(tr);
   }
-  const totI=CATS.filter(c=>!isEgr(c)).reduce((a,c)=>a+totCat[c],0);
+  const totI=CATS.filter(c=>c!=='Egresos').reduce((a,c)=>a+totCat[c],0);
   const totE=totCat['Egresos'];
   const totRow=document.createElement('tr');totRow.className='tot-row';
-  const totCells=CATS.map(c=>`<td class="${isEgr(c)?'v-egr':'v-ing'}">${cop(totCat[c],true)||'—'}</td>`).join('');
+  const totCells=CATS.map(c=>`<td class="${c==='Egresos'?'v-egr':'v-ing'}">${cop(totCat[c],true)||'—'}</td>`).join('');
   totRow.innerHTML=`<td>Tot</td>${totCells}<td class="${(totI-totE)>=0?'v-pos':'v-neg'}">${cop(totI-totE,true)}</td>`;
   tb.appendChild(totRow);
 }
@@ -2321,33 +2082,27 @@ let _sheetDia=null;
 function openSheet(forceToday=false,dia=null){
   _sheetDia=forceToday?new Date().getDate():(dia||new Date().getDate());
   const today=new Date().getDate();
-  $('sheet-title').textContent=_sheetDia===today?'Registro rapido · hoy':`Registro del dia ${_sheetDia}`;
-  const sel=$('s-cat');
-  const ing=S.cats.filter(ct=>ct.tipo==='ingreso');
-  const egr=S.cats.filter(ct=>ct.tipo==='egreso');
-  const mkOpt=ct=>`<option value="${ct.nombre}" data-tipo="${ct.tipo}" data-color="${ct.color||''}" style="color:${ct.tipo==='ingreso'?'#4CAF75':'#E05555'}">${ct.nombre}</option>`;
-  sel.innerHTML=
-    (ing.length?`<optgroup label="── Ingresos">${ing.map(mkOpt).join('')}</optgroup>`:'')+
-    (egr.length?`<optgroup label="── Gastos">${egr.map(mkOpt).join('')}</optgroup>`:'');
-  if(S.activeCat&&sel.querySelector(`[value="${S.activeCat}"]`))sel.value=S.activeCat;
-  onSheetCatChange(sel);
+  $('sheet-title').textContent=_sheetDia===today?'Registro rápido · hoy':`Registro del día ${_sheetDia}`;
+  const pills=$('cat-pills');pills.innerHTML='';
+  CATS.forEach(cat=>{
+    const isEgr=cat==='Egresos',isActive=cat===S.activeCat;
+    const p=document.createElement('div');
+    p.className='cat-pill'+(isActive?(isEgr?' active-egr':' active'):'');
+    p.style.color=isActive?CAT_COLOR[cat]:'';
+    p.textContent=cat;
+    p.onclick=()=>{
+      S.activeCat=cat;
+      pills.querySelectorAll('.cat-pill').forEach(pp=>{pp.className='cat-pill';pp.style.color='';});
+      p.className='cat-pill'+(cat==='Egresos'?' active-egr':' active');
+      p.style.color=CAT_COLOR[cat];
+      $('s-val').style.color=CAT_COLOR[cat];
+    };
+    pills.appendChild(p);
+  });
   $('s-desc').value='';$('s-val').value='';
-  setSheetMoneda('COP');
+  $('s-val').style.color=CAT_COLOR[S.activeCat];
   $('sheet').classList.remove('hidden');
   setTimeout(()=>$('s-desc').focus(),100);
-}
-function onSheetCatChange(sel){
-  const opt=sel.options[sel.selectedIndex];
-  S.activeCat=opt?opt.value:'';
-  const color=opt?(opt.dataset.color||(opt.dataset.tipo==='egreso'?'#E05555':'#4CAF75')):'#4CAF75';
-  const dot=$('s-cat-dot');if(dot)dot.style.background=color;
-  const btn=$('s-save-btn');
-  if(btn)btn.style.background=opt&&opt.dataset.tipo==='egreso'?'var(--red)':'var(--blue)';
-}
-function setSheetMoneda(m){
-  S.sheetMoneda=m;
-  document.querySelectorAll('.s-moneda-btn').forEach(b=>b.classList.remove('active'));
-  $(m==='COP'?'btn-cop-s':'btn-usd-s').classList.add('active');
 }
 function closeSheet(){$('sheet').classList.add('hidden');}
 function guardarEntrada(){
@@ -2358,8 +2113,8 @@ function guardarEntrada(){
     [S.año,S.mes,dia,S.activeCat]);
   const orden=(maxOrd[0]?.m??-1)+1;
   if(orden>=15){toast('Máximo 15 por categoría/día');return;}
-  S.db.run(`INSERT INTO entradas(año,mes,dia,categoria,descripcion,valor,orden,moneda)VALUES(?,?,?,?,?,?,?,?)`,
-    [S.año,S.mes,dia,S.activeCat,desc,val,orden,S.sheetMoneda||'COP']);
+  S.db.run(`INSERT INTO entradas(año,mes,dia,categoria,descripcion,valor,orden)VALUES(?,?,?,?,?,?,?)`,
+    [S.año,S.mes,dia,S.activeCat,desc,val,orden]);
   // Haptic de confirmación — patrón corto-corto
   if(navigator.vibrate) navigator.vibrate([30,30,30]);
   markDirty(); closeSheet();
@@ -2528,8 +2283,8 @@ function renderFX(){
 // ── RENDER AÑO ────────────────────────────────────────────
 function renderAño(){
   const rows=dbq(`SELECT mes,
-    COALESCE(SUM(CASE WHEN categoria NOT IN ${S.egrSQL} THEN valor ELSE 0 END),0) as ing,
-    COALESCE(SUM(CASE WHEN categoria IN ${S.egrSQL} THEN valor ELSE 0 END),0) as egr
+    COALESCE(SUM(CASE WHEN categoria!='Egresos' THEN valor ELSE 0 END),0) as ing,
+    COALESCE(SUM(CASE WHEN categoria='Egresos' THEN valor ELSE 0 END),0) as egr
     FROM entradas WHERE año=? GROUP BY mes`,[S.año]);
   const map={};rows.forEach(r=>map[r.mes]=r);
   const tI=rows.reduce((a,r)=>a+r.ing,0);
@@ -2615,7 +2370,7 @@ function doSearch(){
   const MNOMBRES=['','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
   res.innerHTML=rows.map(r=>{
     const color=CAT_COLOR[r.categoria]||'var(--text3)';
-    const isEgr=isEgr(r.categoria);
+    const isEgr=r.categoria==='Egresos';
     return `<div class="search-item">
       <div class="search-item-dot" style="background:${color}"></div>
       <div class="search-item-body">
@@ -2735,7 +2490,6 @@ async function loadApp(){
   }catch(e){setSyncDot('err');toast('Error cargando DB');}
 
   // Primero desaparecer el loader con su animación bonita
-  loadCategorias();
   go('inicio');
   const ld=$('loader');ld.classList.add('out');
   await new Promise(r=>setTimeout(r,550)); // esperar fadeOut

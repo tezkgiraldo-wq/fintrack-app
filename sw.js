@@ -1,4 +1,4 @@
-const CACHE = 'fintrack-v1.0';
+const CACHE = 'fintrack-v1.1';
 const BASE  = 'https://tezkgiraldo-wq.github.io/fintrack-app/';
 const ASSETS = [
   BASE,
