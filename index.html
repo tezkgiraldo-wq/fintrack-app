@@ -680,9 +680,26 @@ input,select{font-family:inherit;font-size:inherit;color:inherit}
   </div>
 
   <div id="content">
-    <!-- INICIO -->
+    <!-- INICIO — incluye Hoy / Resumen / Por día / Categorías -->
     <div class="view active" id="v-inicio">
-      <div class="scroll">
+
+      <!-- Selector de modo -->
+      <div class="ctrl-mode-bar" id="inicio-mode-bar">
+        <button class="ctrl-mode-btn active" id="im-hoy"     onclick="setInicioMode('hoy')">Hoy</button>
+        <button class="ctrl-mode-btn"        id="im-resumen" onclick="setInicioMode('resumen')">Resumen</button>
+        <button class="ctrl-mode-btn"        id="im-dia"     onclick="setInicioMode('dia')">Por día</button>
+        <button class="ctrl-mode-btn"        id="im-cats"    onclick="openCatModal()">Categorías →</button>
+      </div>
+
+      <!-- KPIs mensuales (visible en Resumen y Por día) -->
+      <div class="ctrl-kpis-bar" id="inicio-kpis" style="display:none">
+        <div class="ctrl-kpi"><div class="lbl">Ingresos</div><div class="val" id="c-ing" style="color:var(--green)">$0</div></div>
+        <div class="ctrl-kpi"><div class="lbl">Egresos</div><div class="val" id="c-egr" style="color:var(--red)">$0</div></div>
+        <div class="ctrl-kpi"><div class="lbl">Balance</div><div class="val" id="c-bal">$0</div></div>
+      </div>
+
+      <!-- SUB-VISTA: HOY -->
+      <div class="scroll" id="inicio-v-hoy">
         <div class="hoy-card">
           <div class="hoy-hdr">
             <div>
@@ -694,14 +711,12 @@ input,select{font-family:inherit;font-size:inherit;color:inherit}
           <div id="hoy-entries"></div>
           <div class="add-hoy" onclick="openSheet(true)">+ agregar registro de hoy</div>
         </div>
-
         <div class="sec-lbl">resumen del mes</div>
         <div class="grid3">
           <div class="card"><div class="lbl">Ingresos</div><div class="val" id="m-ing" style="color:var(--green);font-size:14px">$0</div></div>
           <div class="card"><div class="lbl">Egresos</div><div class="val" id="m-egr" style="color:var(--red);font-size:14px">$0</div></div>
           <div class="card"><div class="lbl">Balance</div><div class="val" id="m-bal" style="font-size:14px">$0</div></div>
         </div>
-
         <div class="sec-lbl">ver otro día</div>
         <div class="cal-wrap">
           <div class="cal-hdr">
@@ -712,45 +727,22 @@ input,select{font-family:inherit;font-size:inherit;color:inherit}
           <div class="cal-sel-entries" id="cal-sel-entries" style="display:none"></div>
         </div>
       </div>
-    </div>
 
-    <!-- CONTROL -->
-    
-    <!-- CONTROL DIARIO -->
-    <div class="view" id="v-diario">
-      <div class="pdiario-kpis" id="pdiario-kpis"></div>
-      <div class="pdiario-wrap" id="pdiario-cal-wrap">
-        <div class="pcal-grid" id="pcal-grid"></div>
-      </div>
-      <div class="pday-panel hidden" id="pday-panel"></div>
-    </div>
-<div class="view" id="v-control">
-      <!-- Modo toggle -->
-      <div class="ctrl-mode-bar">
-        <button class="ctrl-mode-btn active" id="cm-resumen" onclick="setCtrlMode('resumen')">Resumen</button>
-        <button class="ctrl-mode-btn" id="cm-dia" onclick="setCtrlMode('dia')">Por día</button>
-        <button class="ctrl-mode-btn" id="cm-cats" onclick="openCatModal()">Categorías →</button>
-      </div>
-      <!-- KPIs -->
-      <div class="ctrl-kpis-bar">
-        <div class="ctrl-kpi"><div class="lbl">Ingresos</div><div class="val" id="c-ing" style="color:var(--green)">$0</div></div>
-        <div class="ctrl-kpi"><div class="lbl">Egresos</div><div class="val" id="c-egr" style="color:var(--red)">$0</div></div>
-        <div class="ctrl-kpi"><div class="lbl">Balance</div><div class="val" id="c-bal">$0</div></div>
-      </div>
-
-      <!-- MODO RESUMEN -->
-      <div class="ctrl-table-wrap" id="ctrl-v-resumen">
+      <!-- SUB-VISTA: RESUMEN -->
+      <div class="ctrl-table-wrap" id="inicio-v-resumen" style="display:none">
         <table class="ctrl-table">
           <thead><tr>
-            <th>día</th><th style="color:var(--green)88">ing.</th>
-            <th style="color:var(--red)88">egr.</th><th style="color:var(--blue)88">bal.</th>
+            <th>día</th>
+            <th style="color:var(--green)88">ing.</th>
+            <th style="color:var(--red)88">egr.</th>
+            <th style="color:var(--blue)88">bal.</th>
           </tr></thead>
           <tbody id="ctrl-tbody"></tbody>
         </table>
       </div>
 
-      <!-- MODO POR DÍA -->
-      <div class="ctrl-dia-wrap" id="ctrl-v-dia" style="display:none">
+      <!-- SUB-VISTA: POR DÍA -->
+      <div class="ctrl-dia-wrap" id="inicio-v-dia" style="display:none">
         <div class="ctrl-dia-nav">
           <button class="ctrl-dia-btn" onclick="navCtrlDia(-1)">‹</button>
           <div class="ctrl-dia-titulo" id="ctrl-dia-titulo">Día —</div>
@@ -758,26 +750,15 @@ input,select{font-family:inherit;font-size:inherit;color:inherit}
         </div>
         <div class="ctrl-dia-cats" id="ctrl-dia-cats"></div>
       </div>
+    </div>
 
-      <!-- MODO CATEGORÍAS -->
-      <div class="ctrl-cats-wrap" id="ctrl-v-cats" style="display:none">
-        <div class="ctrl-cats-hint">← desliza horizontalmente →</div>
-        <div class="ctrl-cats-scroll">
-          <table class="ctrl-cats-table">
-            <thead><tr>
-              <th>día</th>
-              <th style="color:#4B9EFF">Form.</th>
-              <th style="color:#A855F7">Mant.</th>
-              <th style="color:#14B8A6">Partes</th>
-              <th style="color:#F97316">Prog.</th>
-              <th style="color:#4CAF75">Otros</th>
-              <th style="color:#E05555">Egr.</th>
-              <th style="color:var(--text2)">Total</th>
-            </tr></thead>
-            <tbody id="ctrl-cats-tbody"></tbody>
-          </table>
-        </div>
+    <!-- CONTROL DIARIO (calendario visual, accesible desde hoy-card) -->
+    <div class="view" id="v-diario">
+      <div class="pdiario-kpis" id="pdiario-kpis"></div>
+      <div class="pdiario-wrap" id="pdiario-cal-wrap">
+        <div class="pcal-grid" id="pcal-grid"></div>
       </div>
+      <div class="pday-panel hidden" id="pday-panel"></div>
     </div>
 
     <!-- FIJOS -->
@@ -1090,13 +1071,7 @@ input,select{font-family:inherit;font-size:inherit;color:inherit}
       </svg>
       <div>inicio</div>
     </button>
-    <button class="nav-btn" data-v="control" onclick="go('control')">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-        <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
-        <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
-      </svg>
-      <div>control</div>
-    </button>
+
     <button class="nav-btn" data-v="fijos" onclick="go('fijos')">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
         <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
@@ -1816,15 +1791,17 @@ function go(v){
   if(vEl) vEl.classList.add('active');
   const btn=document.querySelector(`[data-v="${v}"]`);
   if(btn) btn.classList.add('active');
-  // FAB solo en inicio y control
-  $('fab').style.display=(v==='inicio'||v==='control')?'flex':'none';
+  $('fab').style.display=v==='inicio'?'flex':'none';
   refreshView();
 }
 function refreshView(){
   const v=S.activeView;
-  if(v==='inicio')renderInicio();
+  if(v==='inicio'){
+    renderInicio();
+    if(_inicioMode==='resumen')renderControl();
+    if(_inicioMode==='dia')renderCtrlDia(_ctrlDia);
+  }
   if(v==='diario')renderDiario();
-  if(v==='control')renderControl();
   if(v==='fijos')renderFijos();
   if(v==='balance')renderBalance();
   if(v==='año')renderAño();
@@ -2090,12 +2067,29 @@ function renderCalDayEntries(dia){
 // RENDER CONTROL
 // ── CONTROL MENSUAL — 3 MODOS ────────────────────────────
 let _ctrlMode='resumen', _ctrlDia=new Date().getDate();
+let _inicioMode='hoy';
+function setInicioMode(mode){
+  _inicioMode=mode;
+  ['hoy','resumen','dia'].forEach(m=>{
+    const btn=$('im-'+m);
+    if(btn)btn.classList.toggle('active',m===mode);
+    const el=$('inicio-v-'+m);
+    if(el)el.style.display=m===mode?(m==='hoy'?'block':'flex'):'none';
+  });
+  // KPIs visibles solo en resumen y por día
+  const kpis=$('inicio-kpis');
+  if(kpis)kpis.style.display=mode==='hoy'?'none':'';
+  // Quitar active de Categorías (abre modal, no sub-vista)
+  const catBtn=$('im-cats');if(catBtn)catBtn.classList.remove('active');
+  if(mode==='resumen')renderControl();
+  if(mode==='dia')renderCtrlDia(_ctrlDia);
+}
 
 function setCtrlMode(mode){
   _ctrlMode=mode;
   ['resumen','dia','cats'].forEach(m=>{
     document.getElementById('cm-'+m).classList.toggle('active',m===mode);
-    const el=document.getElementById('ctrl-v-'+m);
+    const el=document.getElementById('inicio-v-'+m);
     if(el) el.style.display=m===mode?(m==='resumen'?'block':m==='cats'?'flex':'flex'):'none';
   });
   if(mode==='dia') renderCtrlDia(_ctrlDia);
@@ -2489,13 +2483,8 @@ function editEntrada(id){
   setTimeout(()=>$('s-val').focus(),100);
 }
 
-function deleteFxRow(id,tipo,fecha,usd,cop_v){
+function deleteFxRow(id){
   if(!confirm('¿Eliminar esta operación?'))return;
-  if(tipo==='INGRESO'){
-    const dt=new Date(fecha+'T12:00:00');
-    S.db.run('DELETE FROM entradas WHERE año=? AND mes=? AND dia=? AND moneda=? AND ABS(valor-?)<0.01',
-      [dt.getFullYear(),dt.getMonth()+1,dt.getDate(),'USD',usd]);
-  }
   S.db.run('DELETE FROM cartera_fx WHERE id=?',[id]);
   markDirty();renderFX();renderBalance();pushNow();
   toast('Operación eliminada');
@@ -2642,21 +2631,14 @@ function guardarFx(){
   const isIng=_fxTipo==='INGRESO';
 
   if(isIng){
-    // Ingreso USD laboral — registra en FX + entradas
+    // Ingreso USD — solo en cartera_fx, sin duplicar en entradas
     const usd_v=parseFloat($('fx-usd-inp').value.replace(/,/g,'.'))||0;
     const tasa=parseFloat((dbq("SELECT valor FROM config WHERE clave='tasa_usd'")[0]||{valor:4100}).valor);
-    const cat=$('fx-ingreso-cat')?$('fx-ingreso-cat').value:'';
     if(!fecha||!usd_v){toast('Completa fecha y USD');return;}
     const cop_eq=Math.round(usd_v*tasa);
     const d=new Date(fecha+'T12:00:00');
-    const año=d.getFullYear(),mes=d.getMonth()+1,dia=d.getDate();
-    // 1. FX entry
     S.db.run('INSERT INTO cartera_fx(fecha,año,mes,tipo,cop,tasa_dia,usd,plataforma,notas)VALUES(?,?,?,?,?,?,?,?,?)',
-      [fecha,año,mes,'INGRESO',cop_eq,tasa,usd_v,'Binance',notas]);
-    // 2. entradas entry
-    const orden=(dbq("SELECT COALESCE(MAX(orden),0)+1 AS o FROM entradas WHERE año=? AND mes=? AND dia=?",[año,mes,dia])[0]||{o:1}).o;
-    S.db.run('INSERT INTO entradas(año,mes,dia,categoria,descripcion,valor,moneda,orden)VALUES(?,?,?,?,?,?,?,?)',
-      [año,mes,dia,cat,notas||'Ingreso USD',usd_v,'USD',orden]);
+      [fecha,d.getFullYear(),d.getMonth()+1,'INGRESO',cop_eq,tasa,usd_v,notas||'',notas||'']);
     markDirty();closeFxSheet();renderFX();renderBalance();pushNow();
     toast('💰 Ingreso USD registrado');
     return;
@@ -2722,7 +2704,7 @@ function renderFX(){
       <span style="flex:1;text-align:right;color:var(--text2)">${cop(r.cop,true)}</span>
       <span style="width:54px;text-align:right;color:var(--teal)">${r.usd.toFixed(1)}</span>
      <span style="display:flex;gap:2px;align-items:center">
-        <button onclick="deleteFxRow(${r.id},'${r.tipo}','${r.fecha}',${r.usd})" style="background:transparent;border:none;color:var(--red);font-size:13px;cursor:pointer;padding:2px 5px">🗑</button>
+        <button onclick="deleteFxRow(${r.id})" style="background:transparent;border:none;color:var(--red);font-size:13px;cursor:pointer;padding:2px 5px">🗑</button>
         <button onclick="openFxSheet(${JSON.stringify(r).replace(/"/g,'\'')})" style="background:transparent;border:none;color:var(--text3);font-size:13px;cursor:pointer;padding:2px 5px">✏</button>
       </span>`
     hl.appendChild(el);
