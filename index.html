@@ -1844,10 +1844,10 @@ function renderInicio(){
   const diasSemana=['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
   $('hoy-fecha').textContent=`Hoy · ${diasSemana[today.getDay()]} ${dia}`;
 
-  const entries=dbq(`SELECT id,categoria,descripcion,valor,orden FROM entradas
+  const entries=dbq(`SELECT id,categoria,descripcion,valor,orden,COALESCE(moneda,'COP') as moneda FROM entradas
     WHERE año=? AND mes=? AND dia=? ORDER BY categoria,orden`,[S.año,S.mes,dia]);
-  const totIng=entries.filter(e=>!isEgr(e.categoria)).reduce((a,e)=>a+e.valor,0);
-  const totEgr=entries.filter(e=>isEgr(e.categoria)).reduce((a,e)=>a+e.valor,0);
+  const totIng=entries.filter(e=>!isEgr(e.categoria)).reduce((a,e)=>a+_cop(e.valor,e.moneda,S.tasa),0);
+  const totEgr=entries.filter(e=>isEgr(e.categoria)).reduce((a,e)=>a+_cop(e.valor,e.moneda,S.tasa),0);
   const tot=totIng-totEgr;
   $('hoy-sub').textContent=entries.length?`${entries.length} registro${entries.length>1?'s':''}  ·  mantén para editar · desliza para eliminar`:'Sin registros hoy';
   $('hoy-total').textContent=cop(tot,true);
@@ -1855,22 +1855,30 @@ function renderInicio(){
 
   renderEntries($('hoy-entries'), entries, S.año, S.mes, dia, ()=>renderInicio());
 
-  // Resumen mes
-  const res=dbq(`SELECT
-    COALESCE(SUM(CASE WHEN categoria NOT IN ${S.egrSQL} THEN valor ELSE 0 END),0) as ing,
-    COALESCE(SUM(CASE WHEN categoria IN ${S.egrSQL} THEN valor ELSE 0 END),0) as egr
-    FROM entradas WHERE año=? AND mes=?`,[S.año,S.mes])[0]||{ing:0,egr:0};
-  const bal=res.ing-res.egr;
-  $('m-ing').textContent=cop(res.ing,true);
-  $('m-egr').textContent=cop(res.egr,true);
+  // Resumen mes — separar COP y USD para conversión correcta
+  const resM=dbq(`SELECT
+    COALESCE(SUM(CASE WHEN categoria NOT IN ${S.egrSQL} AND COALESCE(moneda,'COP')!='USD' THEN valor ELSE 0 END),0) as ing_cop,
+    COALESCE(SUM(CASE WHEN categoria IN ${S.egrSQL} AND COALESCE(moneda,'COP')!='USD' THEN valor ELSE 0 END),0) as egr_cop,
+    COALESCE(SUM(CASE WHEN categoria NOT IN ${S.egrSQL} AND moneda='USD' THEN valor ELSE 0 END),0) as ing_usd,
+    COALESCE(SUM(CASE WHEN categoria IN ${S.egrSQL} AND moneda='USD' THEN valor ELSE 0 END),0) as egr_usd
+    FROM entradas WHERE año=? AND mes=?`,[S.año,S.mes])[0]||{ing_cop:0,egr_cop:0,ing_usd:0,egr_usd:0};
+  const tM=S.tasa||4100;
+  const ing=resM.ing_cop + resM.ing_usd*tM;
+  const egr=resM.egr_cop + resM.egr_usd*tM;
+  const bal=ing-egr;
+  $('m-ing').textContent=cop(ing,true);
+  $('m-egr').textContent=cop(egr,true);
   $('m-bal').textContent=cop(bal,true);
   $('m-bal').style.color=bal>=0?'var(--blue)':'var(--red)';
-  // USD equivalentes (COP / tasa actual)
+  // USD: suma directa (USD entries) + equivalente COP
   const usdIng=$('m-ing-usd'),usdEgr=$('m-egr-usd'),usdBal=$('m-bal-usd');
-  if(S.tasa>0){
-    if(usdIng){usdIng.textContent=fmtUsd(res.ing);usdIng.style.display='block';}
-    if(usdEgr){usdEgr.textContent=fmtUsd(res.egr);usdEgr.style.display='block';}
-    if(usdBal){usdBal.textContent=fmtUsd(bal);usdBal.style.display='block';}
+  if(tM>0){
+    const uI=resM.ing_usd + resM.ing_cop/tM;
+    const uE=resM.egr_usd + resM.egr_cop/tM;
+    const uB=uI-uE;
+    if(usdIng){usdIng.textContent=`≈ $${uI.toFixed(2)} USD`;usdIng.style.display='block';}
+    if(usdEgr){usdEgr.textContent=`≈ $${uE.toFixed(2)} USD`;usdEgr.style.display='block';}
+    if(usdBal){usdBal.textContent=`≈ $${uB.toFixed(2)} USD`;usdBal.style.display='block';}
   } else {
     [usdIng,usdEgr,usdBal].forEach(el=>{if(el)el.style.display='none';});
   }
@@ -1902,8 +1910,12 @@ function renderEntries(container, entries, año, mes, dia, onRefresh){
         <div class="reg-cat">${e.categoria}</div>
       </div>
       <div class="reg-val" style="color:${valColor}">
-        ${isEgrCat?'-':''}${cop(e.valor,true)}
-        ${S.tasa>0?`<div style="font-size:9px;opacity:.6;font-weight:400">${fmtUsd(e.valor)}</div>`:''}
+        ${(()=>{
+          const isU=(e.moneda||'COP')==='USD';
+          const prim=isU?`$${parseFloat(e.valor).toFixed(2)} USD`:cop(e.valor,true);
+          const sub=S.tasa>0?(isU?`<div style="font-size:9px;opacity:.6;font-weight:400">≈ ${cop(e.valor*S.tasa,true)}</div>`:`<div style="font-size:9px;opacity:.6;font-weight:400">${fmtUsd(e.valor)}</div>`):'';
+          return `${isEgrCat?'-':''}${prim}${sub}`;
+        })()}
       </div>`;
 
     const delBtn=document.createElement('div');
@@ -2139,28 +2151,32 @@ function setCtrlMode(mode){
 
 function renderControl(){
   // Calcular totales del mes
+  const tRC=S.tasa||4100;
   const rows=dbq(`SELECT dia,categoria,
-    COALESCE(SUM(valor),0) as total
+    COALESCE(SUM(CASE WHEN COALESCE(moneda,'COP')!='USD' THEN valor ELSE 0 END),0) as total_cop,
+    COALESCE(SUM(CASE WHEN moneda='USD' THEN valor ELSE 0 END),0) as total_usd
     FROM entradas WHERE año=? AND mes=? GROUP BY dia,categoria`,
     [S.año,S.mes]);
   const map={};
   rows.forEach(r=>{
     if(!map[r.dia])map[r.dia]={};
-    map[r.dia][r.categoria]=r.total;
+    map[r.dia][r.categoria]=r.total_cop + r.total_usd*tRC; // en COP
   });
-  const tI=rows.filter(r=>!isEgr(r.categoria)).reduce((a,r)=>a+r.total,0);
-  const tE=rows.filter(r=>isEgr(r.categoria)).reduce((a,r)=>a+r.total,0);
+  const tI=rows.filter(r=>!isEgr(r.categoria)).reduce((a,r)=>a+r.total_cop+r.total_usd*tRC,0);
+  const tE=rows.filter(r=>isEgr(r.categoria)).reduce((a,r)=>a+r.total_cop+r.total_usd*tRC,0);
   const tB=tI-tE;
   $('c-ing').textContent=cop(tI,true)||'$0';
   $('c-egr').textContent=cop(tE,true)||'$0';
   $('c-bal').textContent=cop(tB,true)||'$0';
   $('c-bal').style.color=tB>=0?'var(--blue)':'var(--red)';
-  // USD equivalentes (COP / tasa actual)
+  // USD equivalentes
   const cIngUsd=$('c-ing-usd'),cEgrUsd=$('c-egr-usd'),cBalUsd=$('c-bal-usd');
-  if(S.tasa>0){
-    if(cIngUsd){cIngUsd.textContent=fmtUsd(tI);cIngUsd.style.display='block';}
-    if(cEgrUsd){cEgrUsd.textContent=fmtUsd(tE);cEgrUsd.style.display='block';}
-    if(cBalUsd){cBalUsd.textContent=fmtUsd(tB);cBalUsd.style.display='block';}
+  if(tRC>0){
+    const uCI=rows.filter(r=>!isEgr(r.categoria)).reduce((a,r)=>a+r.total_usd+r.total_cop/tRC,0);
+    const uCE=rows.filter(r=>isEgr(r.categoria)).reduce((a,r)=>a+r.total_usd+r.total_cop/tRC,0);
+    if(cIngUsd){cIngUsd.textContent=`≈ $${uCI.toFixed(2)} USD`;cIngUsd.style.display='block';}
+    if(cEgrUsd){cEgrUsd.textContent=`≈ $${uCE.toFixed(2)} USD`;cEgrUsd.style.display='block';}
+    if(cBalUsd){cBalUsd.textContent=`≈ $${(uCI-uCE).toFixed(2)} USD`;cBalUsd.style.display='block';}
   } else {
     [cIngUsd,cEgrUsd,cBalUsd].forEach(el=>{if(el)el.style.display='none';});
   }
@@ -2211,7 +2227,8 @@ function renderCtrlDia(dia){
     if(!byCat[cat])return;
     const color=CAT_COLOR[cat]||'var(--text3)';
     const isEgrFlag=isEgr(cat);
-    const total=byCat[cat].reduce((a,r)=>a+r.valor,0);
+    const tDia=S.tasa||4100;
+    const total=byCat[cat].reduce((a,r)=>a+_cop(r.valor,r.moneda,tDia),0);
     const section=document.createElement('div');
     section.className='ctrl-dia-section';
     section.innerHTML=`
@@ -2769,13 +2786,21 @@ function renderFX(){
 
 // ── RENDER AÑO ────────────────────────────────────────────
 function renderAño(){
+  const tAño=S.tasa||4100;
   const rows=dbq(`SELECT mes,
-    COALESCE(SUM(CASE WHEN categoria NOT IN ${S.egrSQL} THEN valor ELSE 0 END),0) as ing,
-    COALESCE(SUM(CASE WHEN categoria IN ${S.egrSQL} THEN valor ELSE 0 END),0) as egr
+    COALESCE(SUM(CASE WHEN categoria NOT IN ${S.egrSQL} AND COALESCE(moneda,'COP')!='USD' THEN valor ELSE 0 END),0) as ing_cop,
+    COALESCE(SUM(CASE WHEN categoria IN ${S.egrSQL} AND COALESCE(moneda,'COP')!='USD' THEN valor ELSE 0 END),0) as egr_cop,
+    COALESCE(SUM(CASE WHEN categoria NOT IN ${S.egrSQL} AND moneda='USD' THEN valor ELSE 0 END),0) as ing_usd,
+    COALESCE(SUM(CASE WHEN categoria IN ${S.egrSQL} AND moneda='USD' THEN valor ELSE 0 END),0) as egr_usd
     FROM entradas WHERE año=? GROUP BY mes`,[S.año]);
-  const map={};rows.forEach(r=>map[r.mes]=r);
-  const tI=rows.reduce((a,r)=>a+r.ing,0);
-  const tE=rows.reduce((a,r)=>a+r.egr,0);
+  const map={};
+  rows.forEach(r=>{
+    const ing=r.ing_cop+r.ing_usd*tAño;
+    const egr=r.egr_cop+r.egr_usd*tAño;
+    map[r.mes]={ing,egr,ing_usd:r.ing_usd+r.ing_cop/tAño,egr_usd:r.egr_usd+r.egr_cop/tAño};
+  });
+  const tI=rows.reduce((a,r)=>a+r.ing_cop+r.ing_usd*tAño,0);
+  const tE=rows.reduce((a,r)=>a+r.egr_cop+r.egr_usd*tAño,0);
   const tB=tI-tE;
   $('a-ing').textContent=cop(tI,true)||'$0';
   $('a-egr').textContent=cop(tE,true)||'$0';
@@ -2783,10 +2808,12 @@ function renderAño(){
   $('a-bal').style.color=tB>=0?'var(--blue)':'var(--red)';
   // USD equivalentes
   const aIngU=$('a-ing-usd'),aEgrU=$('a-egr-usd'),aBalU=$('a-bal-usd');
-  if(S.tasa>0){
-    if(aIngU){aIngU.textContent=fmtUsd(tI);aIngU.style.display='block';}
-    if(aEgrU){aEgrU.textContent=fmtUsd(tE);aEgrU.style.display='block';}
-    if(aBalU){aBalU.textContent=fmtUsd(tB);aBalU.style.display='block';}
+  if(tAño>0){
+    const uTI=rows.reduce((a,r)=>a+r.ing_usd+r.ing_cop/tAño,0);
+    const uTE=rows.reduce((a,r)=>a+r.egr_usd+r.egr_cop/tAño,0);
+    if(aIngU){aIngU.textContent=`≈ $${uTI.toFixed(2)} USD`;aIngU.style.display='block';}
+    if(aEgrU){aEgrU.textContent=`≈ $${uTE.toFixed(2)} USD`;aEgrU.style.display='block';}
+    if(aBalU){aBalU.textContent=`≈ $${(uTI-uTE).toFixed(2)} USD`;aBalU.style.display='block';}
   }
 
   // Gráfica XY SVG
