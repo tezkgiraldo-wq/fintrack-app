@@ -2772,14 +2772,12 @@ function renderFX(){
     const el=document.createElement('div');el.className='fx-row';
     el.style.cssText='align-items:center';
     el.innerHTML=`
+      <button onclick="deleteFxRow(${r.id})" style="background:transparent;border:none;color:var(--red);font-size:15px;cursor:pointer;padding:2px 10px 2px 0;flex-shrink:0" title="Eliminar">🗑</button>
       <span style="width:52px;color:var(--text3)">${r.fecha.slice(5)}</span>
       <span style="width:56px;color:${r.tipo==='COMPRA'?'var(--green)':r.tipo==='INGRESO'?'var(--gold)':'var(--red)'}">${r.tipo==='INGRESO'?'💰 ing':r.tipo.toLowerCase()}</span>
       <span style="flex:1;text-align:right;color:var(--text2)">${cop(r.cop,true)}</span>
       <span style="width:54px;text-align:right;color:var(--teal)">${r.usd.toFixed(1)}</span>
-     <span style="display:flex;gap:2px;align-items:center">
-        <button onclick="deleteFxRow(${r.id})" style="background:transparent;border:none;color:var(--red);font-size:13px;cursor:pointer;padding:2px 5px">🗑</button>
-        <button onclick="openFxSheet(${JSON.stringify(r).replace(/"/g,'\'')})" style="background:transparent;border:none;color:var(--text3);font-size:13px;cursor:pointer;padding:2px 5px">✏</button>
-      </span>`
+      <button onclick="openFxSheet(${JSON.stringify(r).replace(/"/g,'\'')})" style="background:transparent;border:none;color:var(--text3);font-size:15px;cursor:pointer;padding:2px 0 2px 10px;flex-shrink:0" title="Editar">✏</button>`
     hl.appendChild(el);
   });
 }
