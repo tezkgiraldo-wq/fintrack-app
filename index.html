@@ -701,6 +701,7 @@ input,select{font-family:inherit;font-size:inherit;color:inherit}
         <div class="ctrl-kpi">
           <div class="lbl">Egresos</div>
           <div class="val" id="c-egr" style="color:var(--red)">$0</div>
+          <div id="c-egr-usd" style="font-size:9px;color:var(--red);opacity:.7;display:none"></div>
         </div>
         <div class="ctrl-kpi">
           <div class="lbl">Balance</div>
@@ -732,6 +733,7 @@ input,select{font-family:inherit;font-size:inherit;color:inherit}
           <div class="card">
             <div class="lbl">Egresos</div>
             <div class="val" id="m-egr" style="color:var(--red);font-size:14px">$0</div>
+            <div id="m-egr-usd" style="font-size:9px;color:var(--red);opacity:.7;margin-top:2px;display:none"></div>
           </div>
           <div class="card">
             <div class="lbl">Balance</div>
@@ -796,9 +798,9 @@ input,select{font-family:inherit;font-size:inherit;color:inherit}
     <!-- AÑO -->
     <div class="view" id="v-año">
       <div class="año-kpis">
-        <div class="año-kpi"><div class="lbl">Ingresos</div><div class="val" id="a-ing" style="color:var(--green)">$0</div></div>
-        <div class="año-kpi"><div class="lbl">Egresos</div><div class="val" id="a-egr" style="color:var(--red)">$0</div></div>
-        <div class="año-kpi"><div class="lbl">Balance</div><div class="val" id="a-bal">$0</div></div>
+        <div class="año-kpi"><div class="lbl">Ingresos</div><div class="val" id="a-ing" style="color:var(--green)">$0</div><div id="a-ing-usd" style="font-size:9px;color:var(--teal);margin-top:2px;display:none"></div></div>
+        <div class="año-kpi"><div class="lbl">Egresos</div><div class="val" id="a-egr" style="color:var(--red)">$0</div><div id="a-egr-usd" style="font-size:9px;color:var(--red);opacity:.7;margin-top:2px;display:none"></div></div>
+        <div class="año-kpi"><div class="lbl">Balance</div><div class="val" id="a-bal">$0</div><div id="a-bal-usd" style="font-size:9px;color:var(--teal);margin-top:2px;display:none"></div></div>
       </div>
       <div class="año-chart-wrap">
         <svg id="año-chart" width="100%" height="130" style="display:block;overflow:visible"></svg>
@@ -1244,6 +1246,7 @@ const cop=(v,z=false)=>{
   const fmt=Math.abs(v).toLocaleString('es-CO',{maximumFractionDigits:0});
   return v<0?`-$${fmt}`:`$${fmt}`;
 };
+const fmtUsd=(v,pfx='≈')=>S&&S.tasa>0?`${pfx} $${(Math.abs(v)/S.tasa).toFixed(2)} USD`:'';
 const parseNum=s=>{
   if(!s)return 0;
   s=String(s).replace(/\$/g,'').replace(/\s/g,'').trim();
@@ -1717,11 +1720,10 @@ function renderDiario(){
 
   // KPIs
   const kpis=$('pdiario-kpis');
-  const uBalStr=mUI-mUE!==0?`<div class="pkpi-usd">${mUI-mUE>=0?'+':''}$${Math.abs(mUI-mUE).toFixed(2)} USD</div>`:'';
   kpis.innerHTML=
-    `<div class="pkpi"><div class="pkpi-lbl">ingresos</div><div class="pkpi-val" style="color:var(--green)">${cop(mIng,true)}</div>${mUI>0?`<div class="pkpi-usd">+$${mUI.toFixed(2)} USD</div>`:''}</div>`+
-    `<div class="pkpi"><div class="pkpi-lbl">egresos</div><div class="pkpi-val" style="color:var(--red)">${cop(mEgr,true)}</div>${mUE>0?`<div class="pkpi-usd">-$${mUE.toFixed(2)} USD</div>`:''}</div>`+
-    `<div class="pkpi"><div class="pkpi-lbl">balance</div><div class="pkpi-val" style="color:${mBal>=0?'var(--blue)':'var(--red)'}">${cop(mBal,true)}</div>${uBalStr}</div>`;
+    `<div class="pkpi"><div class="pkpi-lbl">ingresos</div><div class="pkpi-val" style="color:var(--green)">${cop(mIng,true)}</div>${S.tasa>0?`<div class="pkpi-usd">${fmtUsd(mIng)}</div>`:''}</div>`+
+    `<div class="pkpi"><div class="pkpi-lbl">egresos</div><div class="pkpi-val" style="color:var(--red)">${cop(mEgr,true)}</div>${S.tasa>0?`<div class="pkpi-usd" style="color:var(--red);opacity:.7">${fmtUsd(mEgr)}</div>`:''}</div>`+
+    `<div class="pkpi"><div class="pkpi-lbl">balance</div><div class="pkpi-val" style="color:${mBal>=0?'var(--blue)':'var(--red)'}">${cop(mBal,true)}</div>${S.tasa>0?`<div class="pkpi-usd">${fmtUsd(mBal)}</div>`:''}</div>`;
 
   // Calendar cells
   const grid=$('pcal-grid');
@@ -1863,15 +1865,14 @@ function renderInicio(){
   $('m-egr').textContent=cop(res.egr,true);
   $('m-bal').textContent=cop(bal,true);
   $('m-bal').style.color=bal>=0?'var(--blue)':'var(--red)';
-  // USD del mes desde cartera_fx
-  const usdMes=dbq("SELECT COALESCE(SUM(usd),0) as u FROM cartera_fx WHERE tipo='INGRESO' AND año=? AND mes=?",[S.año,S.mes])[0]||{u:0};
-  const usdIng=$('m-ing-usd'),usdBal=$('m-bal-usd');
-  if(usdMes.u>0){
-    if(usdIng){usdIng.textContent=`+ ${usdMes.u.toFixed(2)} USD`;usdIng.style.display='block';}
-    if(usdBal){usdBal.textContent=`+ ${usdMes.u.toFixed(2)} USD`;usdBal.style.display='block';}
+  // USD equivalentes (COP / tasa actual)
+  const usdIng=$('m-ing-usd'),usdEgr=$('m-egr-usd'),usdBal=$('m-bal-usd');
+  if(S.tasa>0){
+    if(usdIng){usdIng.textContent=fmtUsd(res.ing);usdIng.style.display='block';}
+    if(usdEgr){usdEgr.textContent=fmtUsd(res.egr);usdEgr.style.display='block';}
+    if(usdBal){usdBal.textContent=fmtUsd(bal);usdBal.style.display='block';}
   } else {
-    if(usdIng)usdIng.style.display='none';
-    if(usdBal)usdBal.style.display='none';
+    [usdIng,usdEgr,usdBal].forEach(el=>{if(el)el.style.display='none';});
   }
 
   renderCalendar();
@@ -1900,7 +1901,10 @@ function renderEntries(container, entries, año, mes, dia, onRefresh){
         <div class="reg-desc">${e.descripcion||'—'}</div>
         <div class="reg-cat">${e.categoria}</div>
       </div>
-      <div class="reg-val" style="color:${valColor}">${isEgrCat?'-':''}${cop(e.valor,true)}</div>`;
+      <div class="reg-val" style="color:${valColor}">
+        ${isEgrCat?'-':''}${cop(e.valor,true)}
+        ${S.tasa>0?`<div style="font-size:9px;opacity:.6;font-weight:400">${fmtUsd(e.valor)}</div>`:''}
+      </div>`;
 
     const delBtn=document.createElement('div');
     delBtn.className='reg-del';
@@ -2151,15 +2155,14 @@ function renderControl(){
   $('c-egr').textContent=cop(tE,true)||'$0';
   $('c-bal').textContent=cop(tB,true)||'$0';
   $('c-bal').style.color=tB>=0?'var(--blue)':'var(--red)';
-  // USD del mes
-  const usdCtrl=dbq("SELECT COALESCE(SUM(usd),0) as u FROM cartera_fx WHERE tipo='INGRESO' AND año=? AND mes=?",[S.año,S.mes])[0]||{u:0};
-  const cIngUsd=$('c-ing-usd'),cBalUsd=$('c-bal-usd');
-  if(usdCtrl.u>0){
-    if(cIngUsd){cIngUsd.textContent=`+ ${usdCtrl.u.toFixed(2)} USD`;cIngUsd.style.display='block';}
-    if(cBalUsd){cBalUsd.textContent=`+ ${usdCtrl.u.toFixed(2)} USD`;cBalUsd.style.display='block';}
+  // USD equivalentes (COP / tasa actual)
+  const cIngUsd=$('c-ing-usd'),cEgrUsd=$('c-egr-usd'),cBalUsd=$('c-bal-usd');
+  if(S.tasa>0){
+    if(cIngUsd){cIngUsd.textContent=fmtUsd(tI);cIngUsd.style.display='block';}
+    if(cEgrUsd){cEgrUsd.textContent=fmtUsd(tE);cEgrUsd.style.display='block';}
+    if(cBalUsd){cBalUsd.textContent=fmtUsd(tB);cBalUsd.style.display='block';}
   } else {
-    if(cIngUsd)cIngUsd.style.display='none';
-    if(cBalUsd)cBalUsd.style.display='none';
+    [cIngUsd,cEgrUsd,cBalUsd].forEach(el=>{if(el)el.style.display='none';});
   }
 
   // Resumen
@@ -2214,7 +2217,10 @@ function renderCtrlDia(dia){
     section.innerHTML=`
       <div class="ctrl-dia-hdr">
         <div class="ctrl-dia-lbl" style="color:${color}">${cat}</div>
-        <div class="ctrl-dia-total" style="color:${isEgrFlag?'var(--red)':'var(--green)'}">${cop(total,true)}</div>
+        <div class="ctrl-dia-total" style="color:${isEgrFlag?'var(--red)':'var(--green)'}">
+          ${cop(total,true)}
+          ${S.tasa>0?`<div style="font-size:9px;opacity:.7;font-weight:400">${fmtUsd(total)}</div>`:''}
+        </div>
       </div>
       ${byCat[cat].map(e=>`
         <div class="ctrl-dia-entry">
@@ -2775,6 +2781,13 @@ function renderAño(){
   $('a-egr').textContent=cop(tE,true)||'$0';
   $('a-bal').textContent=cop(tB,true)||'$0';
   $('a-bal').style.color=tB>=0?'var(--blue)':'var(--red)';
+  // USD equivalentes
+  const aIngU=$('a-ing-usd'),aEgrU=$('a-egr-usd'),aBalU=$('a-bal-usd');
+  if(S.tasa>0){
+    if(aIngU){aIngU.textContent=fmtUsd(tI);aIngU.style.display='block';}
+    if(aEgrU){aEgrU.textContent=fmtUsd(tE);aEgrU.style.display='block';}
+    if(aBalU){aBalU.textContent=fmtUsd(tB);aBalU.style.display='block';}
+  }
 
   // Gráfica XY SVG
   const svg=$('año-chart');
