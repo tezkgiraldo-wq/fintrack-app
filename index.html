@@ -69,6 +69,14 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--s
 .s-row1,.s-row2{display:flex;gap:6px;align-items:center;margin-bottom:8px}
 .s-select{flex:0 0 auto;min-width:120px;background:var(--bg3);border:1px solid var(--border2);
   border-radius:6px;padding:8px 10px;color:var(--text);font-size:12px;outline:none;font-family:inherit}
+.s-cat-btn{display:flex;align-items:center;gap:6px;padding:0 10px;height:36px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;cursor:pointer;min-width:120px;flex:0 0 auto;user-select:none}
+.s-cat-dot-inner{width:9px;height:9px;border-radius:50%;background:#4CAF75;flex-shrink:0}
+.s-cat-name-lbl{flex:1;font-size:12px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:90px}
+.s-cat-chevron{font-size:9px;color:var(--text3)}
+.cat-pick-row{display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--border);cursor:pointer}
+.cat-pick-row:active{background:var(--bg3)}
+.cat-pick-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.cat-pick-name{flex:1;font-size:13px;color:var(--text)}
 .s-row1 .s-inp{flex:1;min-width:0}
 .s-inp-val{flex:1;font-family:var(--mono);text-align:right;min-width:0}
 .s-moneda-toggle{display:flex;border-radius:6px;overflow:hidden;border:1px solid var(--border2);flex-shrink:0}
@@ -1114,8 +1122,11 @@ input,select{font-family:inherit;font-size:inherit;color:inherit}
       <div class="sheet-title" id="sheet-title">Registro rápido</div>
     </div>
     <div class="s-row1">
-      <select id="s-cat" class="s-select" onchange="onSheetCatChange(this)"></select>
-      <span id="s-cat-dot" style="width:9px;height:9px;border-radius:50%;background:#4CAF75;flex-shrink:0;display:inline-block;align-self:center;margin:0 3px"></span>
+      <div id="s-cat-btn" class="s-cat-btn" onclick="openCatPicker()">
+        <span id="s-cat-dot" class="s-cat-dot-inner"></span>
+        <span id="s-cat-name-lbl" class="s-cat-name-lbl">Categoría</span>
+        <span class="s-cat-chevron">▾</span>
+      </div>
       <input class="s-inp" id="s-desc" type="text" placeholder="Descripción..." autocomplete="off">
     </div>
     <div class="s-row2">
@@ -2133,19 +2144,19 @@ function renderCtrlDia(dia){
   CATS.forEach(cat=>{
     if(!byCat[cat])return;
     const color=CAT_COLOR[cat];
-    const isEgr=isEgr(cat);
+    const isEgrFlag=isEgr(cat);
     const total=byCat[cat].reduce((a,r)=>a+r.valor,0);
     const section=document.createElement('div');
     section.className='ctrl-dia-section';
     section.innerHTML=`
       <div class="ctrl-dia-hdr">
         <div class="ctrl-dia-lbl" style="color:${color}">${cat}</div>
-        <div class="ctrl-dia-total" style="color:${isEgr?'var(--red)':'var(--green)'}">${cop(total,true)}</div>
+        <div class="ctrl-dia-total" style="color:${isEgrFlag?'var(--red)':'var(--green)'}">${cop(total,true)}</div>
       </div>
       ${byCat[cat].map(e=>`
         <div class="ctrl-dia-entry">
           <div class="ctrl-dia-desc">${e.descripcion||'—'}</div>
-          <div class="ctrl-dia-val" style="color:${isEgr?'var(--red)':'var(--text2)'}">${cop(e.valor)}</div>
+          <div class="ctrl-dia-val" style="color:${isEgrFlag?'var(--red)':'var(--text2)'}">${cop(e.valor)}</div>
         </div>`).join('')}`;
     container.appendChild(section);
   });
@@ -2388,19 +2399,57 @@ function openSheet(forceToday=false,dia=null){
   _sheetDia=forceToday?new Date().getDate():(dia||new Date().getDate());
   const today=new Date().getDate();
   $('sheet-title').textContent=_sheetDia===today?'Registro rapido · hoy':`Registro del dia ${_sheetDia}`;
-  const sel=$('s-cat');
-  const ing=S.cats.filter(ct=>ct.tipo==='ingreso');
-  const egr=S.cats.filter(ct=>ct.tipo==='egreso');
-  const mkOpt=ct=>`<option value="${ct.nombre}" data-tipo="${ct.tipo}" data-color="${ct.color||''}" style="color:${ct.tipo==='ingreso'?'#4CAF75':'#E05555'}">${ct.nombre}</option>`;
-  sel.innerHTML=
-    (ing.length?`<optgroup label="── Ingresos">${ing.map(mkOpt).join('')}</optgroup>`:'')+
-    (egr.length?`<optgroup label="── Gastos">${egr.map(mkOpt).join('')}</optgroup>`:'');
-  if(S.activeCat&&sel.querySelector(`[value="${S.activeCat}"]`))sel.value=S.activeCat;
-  onSheetCatChange(sel);
+  // Init custom category button
+  const initCat=S.cats.find(ct=>ct.nombre===S.activeCat)||S.cats[0];
+  if(initCat){
+    S.activeCat=initCat.nombre;
+    const col=initCat.color||(initCat.tipo==='ingreso'?'#4CAF75':'#E05555');
+    const dot=$('s-cat-dot');if(dot)dot.style.background=col;
+    const lbl=$('s-cat-name-lbl');if(lbl)lbl.textContent=initCat.nombre;
+    const btn=$('s-save-btn');
+    if(btn)btn.style.background=initCat.tipo==='egreso'?'var(--red)':'var(--blue)';
+  }
   $('s-desc').value='';$('s-val').value='';
   setSheetMoneda('COP');
   $('sheet').classList.remove('hidden');
   setTimeout(()=>$('s-desc').focus(),100);
+}
+function openCatPicker(){
+  const list=$('cat-pick-list');
+  const ing=S.cats.filter(ct=>ct.tipo==='ingreso');
+  const egr=S.cats.filter(ct=>ct.tipo==='egreso');
+  const mkRow=ct=>{
+    const col=ct.color||(ct.tipo==='ingreso'?'#4CAF75':'#E05555');
+    const sel=S.activeCat===ct.nombre?'<span style="color:var(--blue);font-size:14px;margin-left:4px">✓</span>':'';
+    return `<div class="cat-pick-row" onclick="pickCat('${ct.nombre.replace(/'/g,"\\'")}','${col}','${ct.tipo}')">
+      <span class="cat-pick-dot" style="background:${col}"></span>
+      <span class="cat-pick-name">${ct.nombre}</span>${sel}
+    </div>`;
+  };
+  list.innerHTML=
+    (ing.length?`<div class="cat-sec-lbl ing" style="padding:8px 16px 4px">Ingresos</div>${ing.map(mkRow).join('')}`:'')+
+    (egr.length?`<div class="cat-sec-lbl egr" style="padding:8px 16px 4px">Gastos</div>${egr.map(mkRow).join('')}`:'');
+  $('cat-pick-overlay').classList.remove('hidden');
+}
+function closeCatPicker(){$('cat-pick-overlay').classList.add('hidden');}
+function pickCat(nombre,color,tipo){
+  S.activeCat=nombre;
+  const dot=$('s-cat-dot');if(dot)dot.style.background=color;
+  const lbl=$('s-cat-name-lbl');if(lbl)lbl.textContent=nombre;
+  const btn=$('s-save-btn');
+  if(btn)btn.style.background=tipo==='egreso'?'var(--red)':'var(--blue)';
+  closeCatPicker();
+}
+function deleteFxRow(id,tipo,fecha,usd,cop_v){
+  if(!confirm('¿Eliminar esta operación?'))return;
+  if(tipo==='INGRESO'){
+    const dt=new Date(fecha+'T12:00:00');
+    S.db.run('DELETE FROM entradas WHERE año=? AND mes=? AND dia=? AND moneda=? AND ABS(valor-?)<0.01',
+      [dt.getFullYear(),dt.getMonth()+1,dt.getDate(),'USD',usd]);
+  }
+  S.db.run('DELETE FROM cartera_fx WHERE id=?',[id]);
+  markDirty();renderFX();renderBalance();pushNow();
+  toast('Operación eliminada');
 }
 function onSheetCatChange(sel){
   const opt=sel.options[sel.selectedIndex];
@@ -2619,20 +2668,10 @@ function renderFX(){
       <span style="width:56px;color:${r.tipo==='COMPRA'?'var(--green)':r.tipo==='INGRESO'?'var(--gold)':'var(--red)'}">${r.tipo==='INGRESO'?'💰 ing':r.tipo.toLowerCase()}</span>
       <span style="flex:1;text-align:right;color:var(--text2)">${cop(r.cop,true)}</span>
       <span style="width:54px;text-align:right;color:var(--teal)">${r.usd.toFixed(1)}</span>
-      <span style="width:24px;text-align:right">
-        <button onclick="openFxSheet(${JSON.stringify(r).replace(/"/g,"'")})" style="background:transparent;border:none;color:var(--text3);font-size:12px;cursor:pointer;padding:2px">✏</button>
-      </span>`;
-    // Swipe para eliminar
-    let startX=0;
-    el.addEventListener('touchstart',e=>{startX=e.touches[0].clientX;},{passive:true});
-    el.addEventListener('touchend',e=>{
-      if(e.changedTouches[0].clientX-startX < -60){
-        if(confirm(`¿Eliminar operación ${r.tipo} ${r.fecha}?`)){
-          S.db.run('DELETE FROM cartera_fx WHERE id=?',[r.id]);
-          markDirty();renderFX();pushNow();
-        }
-      }
-    });
+     <span style="display:flex;gap:2px;align-items:center">
+        <button onclick="openFxSheet(${JSON.stringify(r).replace(/"/g,'\'')})" style="background:transparent;border:none;color:var(--text3);font-size:13px;cursor:pointer;padding:2px 5px">✏</button>
+        <button onclick="deleteFxRow(${r.id},'${r.tipo}','${r.fecha}',${r.usd})" style="background:transparent;border:none;color:var(--red);font-size:13px;cursor:pointer;padding:2px 5px">🗑</button>
+      </span>`
     hl.appendChild(el);
   });
 }
