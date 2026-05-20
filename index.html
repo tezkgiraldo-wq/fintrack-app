@@ -9,6 +9,7 @@
 <meta name="theme-color" content="#0D0D0D">
 <title>FinTrack</title>
 <link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png" type="image/png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -1046,6 +1047,16 @@ input,select{font-family:inherit;font-size:inherit;color:inherit}
 
   <button class="fab" id="fab" onclick="openSheet(false)">+</button>
 
+
+<!-- CATEGORY PICKER OVERLAY -->
+<div id="cat-pick-overlay" class="sheet-overlay hidden" onclick="if(event.target===this)closeCatPicker()">
+  <div class="sheet" style="max-height:72vh;overflow-y:auto;padding-bottom:env(safe-area-inset-bottom)">
+    <div class="sheet-handle"></div>
+    <div style="font-size:13px;font-weight:600;letter-spacing:.04em;padding:0 0 10px;border-bottom:1px solid var(--border);margin-bottom:4px">Categoría</div>
+    <div id="cat-pick-list"></div>
+  </div>
+</div>
+
   <!-- BÚSQUEDA OVERLAY -->
   <div class="search-overlay hidden" id="search-overlay" onclick="closeSearchOnBg(event)">
     <div class="search-box">
@@ -1781,10 +1792,19 @@ function closeDayPanel(){
 }
 
 function delDayEntry(id,dia){
+  if(!confirm('¿Eliminar este registro?'))return;
   S.db.run('DELETE FROM entradas WHERE id=?',[id]);
-  markDirty();scheduleSave();
-  renderDayPanel(dia);
-  renderDiario();
+  markDirty();renderDayPanel(dia);renderDiario();refreshView();pushNow();
+  toast('Eliminado');
+}
+// Alias — called from renderCtrlDia and other views
+function deleteEntrada(id){
+  if(!confirm('¿Eliminar este registro?'))return;
+  S.db.run('DELETE FROM entradas WHERE id=?',[id]);
+  markDirty();refreshView();
+  if(_ctrlMode==='dia')renderCtrlDia(_ctrlDia);
+  pushNow();
+  toast('Registro eliminado');
 }
 
 // NAVIGATION
@@ -1852,8 +1872,8 @@ function renderEntries(container, entries, año, mes, dia, onRefresh){
   }
   entries.forEach(e=>{
     const clr=CAT_COLOR[e.categoria]||'#999';
-    const isEgr=isEgr(e.categoria);
-    const valColor=isEgr?'var(--red)':clr;
+    const isEgrCat=isEgr(e.categoria);
+    const valColor=isEgrCat?'var(--red)':clr;
     const item=document.createElement('div');
     item.className='reg-item';
     item.dataset.id=e.id;
@@ -1866,7 +1886,7 @@ function renderEntries(container, entries, año, mes, dia, onRefresh){
         <div class="reg-desc">${e.descripcion||'—'}</div>
         <div class="reg-cat">${e.categoria}</div>
       </div>
-      <div class="reg-val" style="color:${valColor}">${isEgr?'-':''}${cop(e.valor,true)}</div>`;
+      <div class="reg-val" style="color:${valColor}">${isEgrCat?'-':''}${cop(e.valor,true)}</div>`;
 
     const delBtn=document.createElement('div');
     delBtn.className='reg-del';
@@ -2141,9 +2161,11 @@ function renderCtrlDia(dia){
   }
   const byCat={};
   rows.forEach(r=>{if(!byCat[r.categoria])byCat[r.categoria]=[];byCat[r.categoria].push(r);});
-  CATS.forEach(cat=>{
+  // Show all cats: known order first, then any orphan categories
+  const allCats=[...CATS.filter(c=>byCat[c]),...Object.keys(byCat).filter(c=>!CATS.includes(c))];
+  allCats.forEach(cat=>{
     if(!byCat[cat])return;
-    const color=CAT_COLOR[cat];
+    const color=CAT_COLOR[cat]||'var(--text3)';
     const isEgrFlag=isEgr(cat);
     const total=byCat[cat].reduce((a,r)=>a+r.valor,0);
     const section=document.createElement('div');
@@ -2466,12 +2488,7 @@ function editEntrada(id){
   $('sheet').classList.remove('hidden');
   setTimeout(()=>$('s-val').focus(),100);
 }
-function deleteEntrada(id){
-  if(!confirm('¿Eliminar este registro?'))return;
-  S.db.run('DELETE FROM entradas WHERE id=?',[id]);
-  markDirty();renderCtrlDia(_ctrlDia);refreshView();pushNow();
-  toast('Registro eliminado');
-}
+
 function deleteFxRow(id,tipo,fecha,usd,cop_v){
   if(!confirm('¿Eliminar esta operación?'))return;
   if(tipo==='INGRESO'){
@@ -2483,14 +2500,7 @@ function deleteFxRow(id,tipo,fecha,usd,cop_v){
   markDirty();renderFX();renderBalance();pushNow();
   toast('Operación eliminada');
 }
-function onSheetCatChange(sel){
-  const opt=sel.options[sel.selectedIndex];
-  S.activeCat=opt?opt.value:'';
-  const color=opt?(opt.dataset.color||(opt.dataset.tipo==='egreso'?'#E05555':'#4CAF75')):'#4CAF75';
-  const dot=$('s-cat-dot');if(dot)dot.style.background=color;
-  const btn=$('s-save-btn');
-  if(btn)btn.style.background=opt&&opt.dataset.tipo==='egreso'?'var(--red)':'var(--blue)';
-}
+// onSheetCatChange removed in v1.4 — custom picker handles category selection
 function setSheetMoneda(m){
   S.sheetMoneda=m;
   document.querySelectorAll('.s-moneda-btn').forEach(b=>b.classList.remove('active'));
@@ -2809,14 +2819,14 @@ function doSearch(){
   const MNOMBRES=['','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
   res.innerHTML=rows.map(r=>{
     const color=CAT_COLOR[r.categoria]||'var(--text3)';
-    const isEgr=isEgr(r.categoria);
+    const isEgrCat=isEgr(r.categoria);
     return `<div class="search-item">
       <div class="search-item-dot" style="background:${color}"></div>
       <div class="search-item-body">
         <div class="search-item-desc">${r.descripcion||'—'}</div>
         <div class="search-item-meta">${MNOMBRES[r.mes]} ${r.dia} · ${r.categoria}</div>
       </div>
-      <div class="search-item-val" style="color:${isEgr?'var(--red)':'var(--green)'}">${cop(r.valor,true)}</div>
+      <div class="search-item-val" style="color:${isEgrCat?'var(--red)':'var(--green)'}">${cop(r.valor,true)}</div>
     </div>`;
   }).join('');
   cnt.textContent=`${rows.length} resultado${rows.length!==1?'s':''}`;
