@@ -2132,7 +2132,7 @@ function renderCtrlDia(dia){
   $('ctrl-dia-titulo').textContent=`Día ${dia} — ${MNOMBRES[S.mes]}`;
   const container=$('ctrl-dia-cats');
   container.innerHTML='';
-  const rows=dbq(`SELECT categoria,descripcion,valor FROM entradas
+  const rows=dbq(`SELECT id,categoria,descripcion,valor,moneda FROM entradas
     WHERE año=? AND mes=? AND dia=? ORDER BY categoria,orden`,
     [S.año,S.mes,dia]);
   if(!rows.length){
@@ -2156,7 +2156,11 @@ function renderCtrlDia(dia){
       ${byCat[cat].map(e=>`
         <div class="ctrl-dia-entry">
           <div class="ctrl-dia-desc">${e.descripcion||'—'}</div>
-          <div class="ctrl-dia-val" style="color:${isEgrFlag?'var(--red)':'var(--text2)'}">${cop(e.valor)}</div>
+          <div class="ctrl-dia-val" style="color:${isEgrFlag?'var(--red)':'var(--text2)'}">${e.moneda==='USD'?e.valor.toFixed(2)+' USD':cop(e.valor)}</div>
+          <div style="display:flex;gap:0;flex-shrink:0">
+            <button onclick="deleteEntrada(${e.id})" style="background:none;border:none;color:var(--red);font-size:12px;cursor:pointer;padding:2px 5px">🗑</button>
+            <button onclick="editEntrada(${e.id})" style="background:none;border:none;color:var(--text3);font-size:12px;cursor:pointer;padding:2px 5px">✏</button>
+          </div>
         </div>`).join('')}`;
     container.appendChild(section);
   });
@@ -2394,7 +2398,7 @@ function renderBalance(){
 }
 
 // SHEET — registro rápido
-let _sheetDia=null;
+let _sheetDia=null,_sheetEditId=null;
 function openSheet(forceToday=false,dia=null){
   _sheetDia=forceToday?new Date().getDate():(dia||new Date().getDate());
   const today=new Date().getDate();
@@ -2440,6 +2444,34 @@ function pickCat(nombre,color,tipo){
   if(btn)btn.style.background=tipo==='egreso'?'var(--red)':'var(--blue)';
   closeCatPicker();
 }
+function editEntrada(id){
+  const rows=dbq('SELECT id,categoria,descripcion,valor,moneda FROM entradas WHERE id=?',[id]);
+  if(!rows.length)return;
+  const e=rows[0];
+  _sheetEditId=id;
+  _sheetDia=_ctrlDia;
+  const catObj=S.cats.find(ct=>ct.nombre===e.categoria)||S.cats[0];
+  if(catObj){
+    S.activeCat=catObj.nombre;
+    const col=catObj.color||(catObj.tipo==='ingreso'?'#4CAF75':'#E05555');
+    const dot=$('s-cat-dot');if(dot)dot.style.background=col;
+    const lbl=$('s-cat-name-lbl');if(lbl)lbl.textContent=catObj.nombre;
+    const btn=$('s-save-btn');if(btn)btn.style.background=catObj.tipo==='egreso'?'var(--red)':'var(--blue)';
+  }
+  $('s-desc').value=e.descripcion||'';
+  $('s-val').value=e.valor;
+  setSheetMoneda(e.moneda||'COP');
+  $('sheet-title').textContent='Editar registro';
+  const btn=$('s-save-btn');if(btn)btn.textContent='Guardar';
+  $('sheet').classList.remove('hidden');
+  setTimeout(()=>$('s-val').focus(),100);
+}
+function deleteEntrada(id){
+  if(!confirm('¿Eliminar este registro?'))return;
+  S.db.run('DELETE FROM entradas WHERE id=?',[id]);
+  markDirty();renderCtrlDia(_ctrlDia);refreshView();pushNow();
+  toast('Registro eliminado');
+}
 function deleteFxRow(id,tipo,fecha,usd,cop_v){
   if(!confirm('¿Eliminar esta operación?'))return;
   if(tipo==='INGRESO'){
@@ -2464,10 +2496,21 @@ function setSheetMoneda(m){
   document.querySelectorAll('.s-moneda-btn').forEach(b=>b.classList.remove('active'));
   $(m==='COP'?'btn-cop-s':'btn-usd-s').classList.add('active');
 }
-function closeSheet(){$('sheet').classList.add('hidden');}
+function closeSheet(){
+  $('sheet').classList.add('hidden');
+  _sheetEditId=null;
+  const btn=$('s-save-btn');if(btn)btn.textContent='+ agregar';
+}
 function guardarEntrada(){
   const desc=$('s-desc').value.trim(),val=parseNum($('s-val').value);
   if(!desc&&!val){toast('Agrega descripción o valor');return;}
+  if(_sheetEditId){
+    S.db.run('UPDATE entradas SET categoria=?,descripcion=?,valor=?,moneda=? WHERE id=?',
+      [S.activeCat,desc,val,S.sheetMoneda||'COP',_sheetEditId]);
+    _sheetEditId=null;
+    markDirty();closeSheet();toast('✓ Registro actualizado');refreshView();pushNow();
+    return;
+  }
   const dia=_sheetDia||new Date().getDate();
   const maxOrd=dbq(`SELECT MAX(orden) as m FROM entradas WHERE año=? AND mes=? AND dia=? AND categoria=?`,
     [S.año,S.mes,dia,S.activeCat]);
@@ -2669,8 +2712,8 @@ function renderFX(){
       <span style="flex:1;text-align:right;color:var(--text2)">${cop(r.cop,true)}</span>
       <span style="width:54px;text-align:right;color:var(--teal)">${r.usd.toFixed(1)}</span>
      <span style="display:flex;gap:2px;align-items:center">
-        <button onclick="openFxSheet(${JSON.stringify(r).replace(/"/g,'\'')})" style="background:transparent;border:none;color:var(--text3);font-size:13px;cursor:pointer;padding:2px 5px">✏</button>
         <button onclick="deleteFxRow(${r.id},'${r.tipo}','${r.fecha}',${r.usd})" style="background:transparent;border:none;color:var(--red);font-size:13px;cursor:pointer;padding:2px 5px">🗑</button>
+        <button onclick="openFxSheet(${JSON.stringify(r).replace(/"/g,'\'')})" style="background:transparent;border:none;color:var(--text3);font-size:13px;cursor:pointer;padding:2px 5px">✏</button>
       </span>`
     hl.appendChild(el);
   });
