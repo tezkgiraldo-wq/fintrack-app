@@ -490,7 +490,9 @@ input,select{font-family:inherit;font-size:inherit;color:inherit}
 .ctrl-cats-table .v-pos{color:var(--blue)}.ctrl-cats-table .v-neg{color:var(--red)}
 .ctrl-cats-table tr.tot-row td{color:var(--text);border-top:1px solid var(--border2);background:var(--bg1)}
 .ctrl-cats-table tr.tot-row td:first-child{background:var(--bg1)}
-.fijo-row{display:grid;grid-template-columns:32px 1fr auto 32px;align-items:center;gap:6px;padding:8px 12px;border-bottom:1px solid var(--border);background:var(--bg1);border-radius:0;transition:background .1s}
+.fijo-row{display:grid;grid-template-columns:32px 18px 1fr auto 32px;align-items:center;gap:6px;padding:8px 12px;border-bottom:1px solid var(--border);background:var(--bg1);border-radius:0;transition:background .1s}
+.fijo-cat-dot{width:14px;height:14px;border-radius:50%;border:none;cursor:pointer;flex-shrink:0;padding:0;transition:transform .1s,box-shadow .1s}
+.fijo-cat-dot:active{transform:scale(.85)}
 .fijo-row:last-child{border-bottom:none}
 .fijo-chk{width:22px;height:22px;border-radius:50%;border:2px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:11px;color:transparent;cursor:pointer;flex-shrink:0;transition:all .15s}
 .fijo-chk.paid{background:var(--green);border-color:var(--green);color:#fff}
@@ -1483,8 +1485,10 @@ function initSchema(){
       activo INTEGER DEFAULT 1
     );
   `);
-  // Migration: add moneda to entradas
+  // Migration: add moneda to entradas, categoria to gastos_fijos, fijo_id to entradas
   try { S.db.run("ALTER TABLE entradas ADD COLUMN moneda TEXT DEFAULT 'COP'"); } catch(e){}
+  try { S.db.run("ALTER TABLE gastos_fijos ADD COLUMN categoria TEXT DEFAULT 'Otros gastos'"); } catch(e){}
+  try { S.db.run("ALTER TABLE entradas ADD COLUMN fijo_id INTEGER DEFAULT NULL"); } catch(e){}
   // Seed tasa default
   S.db.run("INSERT OR IGNORE INTO config(clave,valor) VALUES('tasa_usd','4100')");
   // Seed categorias
@@ -1830,7 +1834,7 @@ function refreshView(){
     if(_inicioMode==='resumen')renderControl();
     if(_inicioMode==='dia')renderCtrlDia(_ctrlDia);
   }
-  if(v==='diario')renderDiario();
+  // v-diario no está en nav — omitir
   if(v==='fijos')renderFijos();
   if(v==='balance')renderBalance();
   if(v==='año')renderAño();
@@ -2299,8 +2303,32 @@ function renderCtrlCats(){
 }
 
 // RENDER FIJOS
+function _fijoTogglePago(p, nuevoPagado){
+  S.db.run(`INSERT INTO pagos_fijos(gasto_id,año,mes,pagado)VALUES(?,?,?,?)
+    ON CONFLICT(gasto_id,año,mes)DO UPDATE SET pagado=excluded.pagado`,
+    [p.id,S.año,S.mes,nuevoPagado]);
+  if(nuevoPagado){
+    // Insertar en entradas como egreso del día actual (o día 1 si mes pasado)
+    const hoy=new Date();
+    const esMesActual=hoy.getFullYear()===S.año&&hoy.getMonth()+1===S.mes;
+    const dia=esMesActual?hoy.getDate():1;
+    const catObj=S.cats.find(c=>c.nombre===p.categoria)||S.cats.find(c=>c.tipo==='egreso')||S.cats[0];
+    const catName=catObj?catObj.nombre:(p.categoria||'Otros gastos');
+    const maxOrd=dbq(`SELECT COALESCE(MAX(orden),0)+1 as n FROM entradas WHERE año=? AND mes=? AND dia=? AND categoria=?`,[S.año,S.mes,dia,catName]);
+    const orden=maxOrd[0]?maxOrd[0].n:0;
+    S.db.run(`INSERT INTO entradas(año,mes,dia,categoria,descripcion,valor,orden,moneda,fijo_id)VALUES(?,?,?,?,?,?,?,'COP',?)`,
+      [S.año,S.mes,dia,catName,p.descripcion,p.valor,orden,p.id]);
+  } else {
+    // Borrar la entrada auto-insertada
+    S.db.run('DELETE FROM entradas WHERE fijo_id=? AND año=? AND mes=?',[p.id,S.año,S.mes]);
+  }
+  markDirty(); renderFijos(); refreshView(); pushNow();
+}
+
 function renderFijos(){
-  const pagos=dbq(`SELECT gf.id,gf.descripcion,gf.valor,gf.activo,COALESCE(pf.pagado,0) as pagado
+  const pagos=dbq(`SELECT gf.id,gf.descripcion,gf.valor,gf.activo,
+    COALESCE(gf.categoria,'Otros gastos') as categoria,
+    COALESCE(pf.pagado,0) as pagado
     FROM gastos_fijos gf LEFT JOIN pagos_fijos pf ON gf.id=pf.gasto_id AND pf.año=? AND pf.mes=?
     WHERE gf.activo=1 ORDER BY gf.id`,[S.año,S.mes]);
   const total=pagos.reduce((a,p)=>a+p.valor,0);
@@ -2315,12 +2343,16 @@ function renderFijos(){
     const chk=document.createElement('div');
     chk.className='fijo-chk'+(p.pagado?' paid':'');
     chk.textContent='✓';
-    chk.onclick=()=>{
-      S.db.run(`INSERT INTO pagos_fijos(gasto_id,año,mes,pagado)VALUES(?,?,?,?)
-        ON CONFLICT(gasto_id,año,mes)DO UPDATE SET pagado=excluded.pagado`,
-        [p.id,S.año,S.mes,p.pagado?0:1]);
-      markDirty();renderFijos();pushNow();
-    };
+    chk.onclick=()=>_fijoTogglePago(p, p.pagado?0:1);
+
+    // Dot categoría (abre picker)
+    const catObj=S.cats.find(c=>c.nombre===p.categoria);
+    const catColor=catObj?catObj.color:'#888';
+    const catDot=document.createElement('button');
+    catDot.className='fijo-cat-dot';
+    catDot.style.background=catColor;
+    catDot.title=p.categoria;
+    catDot.onclick=()=>openFijoCatPick(p.id,p.categoria);
 
     // Nombre editable
     const nameInp=document.createElement('input');
@@ -2351,19 +2383,21 @@ function renderFijos(){
     del.className='fijo-del';del.textContent='✕';
     del.onclick=()=>{
       if(!confirm(`¿Eliminar "${p.descripcion}"?`))return;
+      S.db.run('DELETE FROM entradas WHERE fijo_id=? AND año=? AND mes=?',[p.id,S.año,S.mes]);
       S.db.run('UPDATE gastos_fijos SET activo=0 WHERE id=?',[p.id]);
-      markDirty();renderFijos();pushNow();
+      markDirty();renderFijos();refreshView();pushNow();
     };
 
-    row.appendChild(chk);row.appendChild(nameInp);row.appendChild(valInp);row.appendChild(del);
+    row.appendChild(chk);row.appendChild(catDot);row.appendChild(nameInp);row.appendChild(valInp);row.appendChild(del);
     list.appendChild(row);
   });
 }
 
 function addFijo(){
-  S.db.run("INSERT INTO gastos_fijos(descripcion,valor,activo)VALUES('Nuevo gasto',0,1)");
+  const defCat=S.cats.find(c=>c.tipo==='egreso');
+  const catName=defCat?defCat.nombre:'Otros gastos';
+  S.db.run("INSERT INTO gastos_fijos(descripcion,valor,activo,categoria)VALUES('Nuevo gasto',0,1,?)",[catName]);
   markDirty();renderFijos();pushNow();
-  // Focus en el último nombre
   setTimeout(()=>{
     const inputs=document.querySelectorAll('.fijo-name-inp');
     if(inputs.length) inputs[inputs.length-1].focus();
@@ -2515,13 +2549,19 @@ function openSheet(forceToday=false,dia=null){
   $('sheet').classList.remove('hidden');
   setTimeout(()=>$('s-desc').focus(),100);
 }
-function openCatPicker(){
+let _catPickMode='sheet', _catPickFijoId=null;
+function openFijoCatPick(id,currentCat){
+  _catPickMode='fijo'; _catPickFijoId=id;
+  openCatPicker(currentCat);
+}
+function openCatPicker(currentCat){
   const list=$('cat-pick-list');
   const ing=S.cats.filter(ct=>ct.tipo==='ingreso');
   const egr=S.cats.filter(ct=>ct.tipo==='egreso');
   const mkRow=ct=>{
     const col=ct.color||(ct.tipo==='ingreso'?'#4CAF75':'#E05555');
-    const sel=S.activeCat===ct.nombre?'<span style="color:var(--blue);font-size:14px;margin-left:4px">✓</span>':'';
+    const activeName=_catPickMode==='fijo'?currentCat:S.activeCat;
+    const sel=activeName===ct.nombre?'<span style="color:var(--blue);font-size:14px;margin-left:4px">✓</span>':'';
     return `<div class="cat-pick-row" onclick="pickCat('${ct.nombre.replace(/'/g,"\\'")}','${col}','${ct.tipo}')">
       <span class="cat-pick-dot" style="background:${col}"></span>
       <span class="cat-pick-name">${ct.nombre}</span>${sel}
@@ -2534,6 +2574,12 @@ function openCatPicker(){
 }
 function closeCatPicker(){$('cat-pick-overlay').classList.add('hidden');}
 function pickCat(nombre,color,tipo){
+  if(_catPickMode==='fijo'){
+    S.db.run('UPDATE gastos_fijos SET categoria=? WHERE id=?',[nombre,_catPickFijoId]);
+    markDirty(); renderFijos(); pushNow();
+    closeCatPicker(); _catPickMode='sheet'; _catPickFijoId=null;
+    return;
+  }
   S.activeCat=nombre;
   const dot=$('s-cat-dot');if(dot)dot.style.background=color;
   const lbl=$('s-cat-name-lbl');if(lbl)lbl.textContent=nombre;
@@ -2812,12 +2858,13 @@ function renderAño(){
   $('a-egr').textContent=cop(tE,true)||'$0';
   $('a-bal').textContent=cop(tB,true)||'$0';
   $('a-bal').style.color=tB>=0?'var(--blue)':'var(--red)';
-  // USD equivalentes
+  // USD equivalentes + ingreso directo USD desde cartera_fx
+  const fxAño=dbq("SELECT COALESCE(SUM(usd),0) as u FROM cartera_fx WHERE tipo='INGRESO' AND año=?",[S.año])[0]||{u:0};
   const aIngU=$('a-ing-usd'),aEgrU=$('a-egr-usd'),aBalU=$('a-bal-usd');
   if(tAño>0){
-    const uTI=rows.reduce((a,r)=>a+r.ing_usd+r.ing_cop/tAño,0);
+    const uTI=rows.reduce((a,r)=>a+r.ing_usd+r.ing_cop/tAño,0)+fxAño.u;
     const uTE=rows.reduce((a,r)=>a+r.egr_usd+r.egr_cop/tAño,0);
-    if(aIngU){aIngU.textContent=`≈ $${uTI.toFixed(2)} USD`;aIngU.style.display='block';}
+    if(aIngU){aIngU.textContent=`≈ $${uTI.toFixed(2)} USD${fxAño.u>0?' (inc. FX)':''}`;aIngU.style.display='block';}
     if(aEgrU){aEgrU.textContent=`≈ $${uTE.toFixed(2)} USD`;aEgrU.style.display='block';}
     if(aBalU){aBalU.textContent=`≈ $${(uTI-uTE).toFixed(2)} USD`;aBalU.style.display='block';}
   }
@@ -2887,27 +2934,45 @@ function doSearch(){
     res.innerHTML='<div class="search-empty">Escribe al menos 2 caracteres</div>';
     cnt.classList.add('hidden');return;
   }
-  const rows=dbq(`SELECT mes,dia,categoria,descripcion,valor FROM entradas
-    WHERE año=? AND descripcion LIKE ? ORDER BY mes DESC,dia DESC,id DESC LIMIT 100`,
-    [S.año,'%'+q+'%']);
-  if(!rows.length){
+  const MNOMBRES=['','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  const rows=dbq(`SELECT mes,dia,categoria,descripcion,valor,COALESCE(moneda,'COP') as moneda FROM entradas
+    WHERE año=? AND (descripcion LIKE ? OR categoria LIKE ?) ORDER BY mes DESC,dia DESC,id DESC LIMIT 80`,
+    [S.año,'%'+q+'%','%'+q+'%']);
+  const fxRows=dbq(`SELECT mes,tipo,cop,usd,notas,plataforma FROM cartera_fx
+    WHERE año=? AND (notas LIKE ? OR plataforma LIKE ?) ORDER BY mes DESC,id DESC LIMIT 20`,
+    [S.año,'%'+q+'%','%'+q+'%']);
+  const total=rows.length+fxRows.length;
+  if(!total){
     res.innerHTML=`<div class="search-empty">Sin resultados para "${q}"</div>`;
     cnt.classList.add('hidden');return;
   }
-  const MNOMBRES=['','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-  res.innerHTML=rows.map(r=>{
+  const itemsEnt=rows.map(r=>{
+    const isU=(r.moneda||'COP')==='USD';
     const color=CAT_COLOR[r.categoria]||'var(--text3)';
     const isEgrCat=isEgr(r.categoria);
+    const valStr=isU?`$${parseFloat(r.valor).toFixed(2)} USD`:cop(r.valor,true);
     return `<div class="search-item">
       <div class="search-item-dot" style="background:${color}"></div>
       <div class="search-item-body">
         <div class="search-item-desc">${r.descripcion||'—'}</div>
         <div class="search-item-meta">${MNOMBRES[r.mes]} ${r.dia} · ${r.categoria}</div>
       </div>
-      <div class="search-item-val" style="color:${isEgrCat?'var(--red)':'var(--green)'}">${cop(r.valor,true)}</div>
+      <div class="search-item-val" style="color:${isEgrCat?'var(--red)':'var(--green)'}">${valStr}</div>
     </div>`;
-  }).join('');
-  cnt.textContent=`${rows.length} resultado${rows.length!==1?'s':''}`;
+  });
+  const itemsFx=fxRows.map(r=>{
+    const tipColor=r.tipo==='COMPRA'?'var(--green)':r.tipo==='INGRESO'?'var(--gold)':'var(--red)';
+    return `<div class="search-item">
+      <div class="search-item-dot" style="background:${tipColor}">💱</div>
+      <div class="search-item-body">
+        <div class="search-item-desc">${r.notas||r.plataforma||r.tipo}</div>
+        <div class="search-item-meta">${MNOMBRES[r.mes]} · FX ${r.tipo.toLowerCase()}</div>
+      </div>
+      <div class="search-item-val" style="color:${tipColor}">${r.usd.toFixed(2)} USD</div>
+    </div>`;
+  });
+  res.innerHTML=itemsEnt.concat(itemsFx).join('');
+  cnt.textContent=`${total} resultado${total!==1?'s':''}`;
   cnt.classList.remove('hidden');
 }
 
