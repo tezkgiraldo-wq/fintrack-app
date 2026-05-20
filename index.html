@@ -693,9 +693,20 @@ input,select{font-family:inherit;font-size:inherit;color:inherit}
 
       <!-- KPIs mensuales (visible en Resumen y Por día) -->
       <div class="ctrl-kpis-bar" id="inicio-kpis" style="display:none">
-        <div class="ctrl-kpi"><div class="lbl">Ingresos</div><div class="val" id="c-ing" style="color:var(--green)">$0</div></div>
-        <div class="ctrl-kpi"><div class="lbl">Egresos</div><div class="val" id="c-egr" style="color:var(--red)">$0</div></div>
-        <div class="ctrl-kpi"><div class="lbl">Balance</div><div class="val" id="c-bal">$0</div></div>
+        <div class="ctrl-kpi">
+          <div class="lbl">Ingresos</div>
+          <div class="val" id="c-ing" style="color:var(--green)">$0</div>
+          <div id="c-ing-usd" style="font-size:9px;color:var(--teal);display:none"></div>
+        </div>
+        <div class="ctrl-kpi">
+          <div class="lbl">Egresos</div>
+          <div class="val" id="c-egr" style="color:var(--red)">$0</div>
+        </div>
+        <div class="ctrl-kpi">
+          <div class="lbl">Balance</div>
+          <div class="val" id="c-bal">$0</div>
+          <div id="c-bal-usd" style="font-size:9px;color:var(--teal);display:none"></div>
+        </div>
       </div>
 
       <!-- SUB-VISTA: HOY -->
@@ -713,9 +724,20 @@ input,select{font-family:inherit;font-size:inherit;color:inherit}
         </div>
         <div class="sec-lbl">resumen del mes</div>
         <div class="grid3">
-          <div class="card"><div class="lbl">Ingresos</div><div class="val" id="m-ing" style="color:var(--green);font-size:14px">$0</div></div>
-          <div class="card"><div class="lbl">Egresos</div><div class="val" id="m-egr" style="color:var(--red);font-size:14px">$0</div></div>
-          <div class="card"><div class="lbl">Balance</div><div class="val" id="m-bal" style="font-size:14px">$0</div></div>
+          <div class="card">
+            <div class="lbl">Ingresos</div>
+            <div class="val" id="m-ing" style="color:var(--green);font-size:14px">$0</div>
+            <div id="m-ing-usd" style="font-size:9px;color:var(--teal);margin-top:2px;display:none"></div>
+          </div>
+          <div class="card">
+            <div class="lbl">Egresos</div>
+            <div class="val" id="m-egr" style="color:var(--red);font-size:14px">$0</div>
+          </div>
+          <div class="card">
+            <div class="lbl">Balance</div>
+            <div class="val" id="m-bal" style="font-size:14px">$0</div>
+            <div id="m-bal-usd" style="font-size:9px;color:var(--teal);margin-top:2px;display:none"></div>
+          </div>
         </div>
         <div class="sec-lbl">ver otro día</div>
         <div class="cal-wrap">
@@ -810,11 +832,19 @@ input,select{font-family:inherit;font-size:inherit;color:inherit}
         </div>
 
         <!-- Cuentas editables -->
-        <!-- USD Binance — card destacada full-width -->
+        <!-- USD Binance — card editable -->
         <div class="card" style="margin-bottom:8px;border-color:var(--teal)33">
-          <div style="font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--teal);margin-bottom:6px">USD Binance</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+            <div style="font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--teal)">USD Binance</div>
+            <div style="font-size:9px;color:var(--text3)">valor real</div>
+          </div>
           <div class="val" id="bal-usd-val" style="color:var(--teal);font-size:18px">$0</div>
           <div style="font-size:11px;color:var(--text3);margin-top:2px" id="bal-usd-sub">— USD</div>
+          <input class="bal-edit-inp" id="bal-usd-real-inp" inputmode="decimal" placeholder="USD disponibles (auto)"
+            style="color:var(--teal);margin-top:8px;font-size:12px"
+            onblur="saveUsdReal(this.value)"
+            onkeydown="if(event.key==='Enter')this.blur()">
+          <div style="font-size:9px;color:var(--text3);margin-top:3px">Dejar vacío = calcular desde FX</div>
         </div>
 
         <!-- Banco + Efectivo -->
@@ -1013,10 +1043,7 @@ input,select{font-family:inherit;font-size:inherit;color:inherit}
             <input id="fx-usd-inp" class="s-inp" inputmode="decimal" placeholder="0.00">
           </div>
         </div>
-        <div id="fx-cat-row" style="display:none">
-          <div class="s-lbl" style="color:var(--gold)">Categoría ingreso</div>
-          <select id="fx-ingreso-cat" class="s-inp" style="color:var(--gold)"></select>
-        </div>
+<!-- fx-cat-row removed in v1.4 — INGRESO no longer inserts to entradas -->
         <div>
           <div class="s-lbl">Plataforma / Notas</div>
           <input id="fx-notas" class="s-inp" placeholder="Binance, notas...">
@@ -1030,7 +1057,7 @@ input,select{font-family:inherit;font-size:inherit;color:inherit}
 
 
 <!-- CATEGORY PICKER OVERLAY -->
-<div id="cat-pick-overlay" class="sheet-overlay hidden" onclick="if(event.target===this)closeCatPicker()">
+<div id="cat-pick-overlay" class="sheet-overlay hidden" style="z-index:40" onclick="if(event.target===this)closeCatPicker()">
   <div class="sheet" style="max-height:72vh;overflow-y:auto;padding-bottom:env(safe-area-inset-bottom)">
     <div class="sheet-handle"></div>
     <div style="font-size:13px;font-weight:600;letter-spacing:.04em;padding:0 0 10px;border-bottom:1px solid var(--border);margin-bottom:4px">Categoría</div>
@@ -1836,6 +1863,16 @@ function renderInicio(){
   $('m-egr').textContent=cop(res.egr,true);
   $('m-bal').textContent=cop(bal,true);
   $('m-bal').style.color=bal>=0?'var(--blue)':'var(--red)';
+  // USD del mes desde cartera_fx
+  const usdMes=dbq("SELECT COALESCE(SUM(usd),0) as u FROM cartera_fx WHERE tipo='INGRESO' AND año=? AND mes=?",[S.año,S.mes])[0]||{u:0};
+  const usdIng=$('m-ing-usd'),usdBal=$('m-bal-usd');
+  if(usdMes.u>0){
+    if(usdIng){usdIng.textContent=`+ ${usdMes.u.toFixed(2)} USD`;usdIng.style.display='block';}
+    if(usdBal){usdBal.textContent=`+ ${usdMes.u.toFixed(2)} USD`;usdBal.style.display='block';}
+  } else {
+    if(usdIng)usdIng.style.display='none';
+    if(usdBal)usdBal.style.display='none';
+  }
 
   renderCalendar();
 }
@@ -2114,6 +2151,16 @@ function renderControl(){
   $('c-egr').textContent=cop(tE,true)||'$0';
   $('c-bal').textContent=cop(tB,true)||'$0';
   $('c-bal').style.color=tB>=0?'var(--blue)':'var(--red)';
+  // USD del mes
+  const usdCtrl=dbq("SELECT COALESCE(SUM(usd),0) as u FROM cartera_fx WHERE tipo='INGRESO' AND año=? AND mes=?",[S.año,S.mes])[0]||{u:0};
+  const cIngUsd=$('c-ing-usd'),cBalUsd=$('c-bal-usd');
+  if(usdCtrl.u>0){
+    if(cIngUsd){cIngUsd.textContent=`+ ${usdCtrl.u.toFixed(2)} USD`;cIngUsd.style.display='block';}
+    if(cBalUsd){cBalUsd.textContent=`+ ${usdCtrl.u.toFixed(2)} USD`;cBalUsd.style.display='block';}
+  } else {
+    if(cIngUsd)cIngUsd.style.display='none';
+    if(cBalUsd)cBalUsd.style.display='none';
+  }
 
   // Resumen
   const tb=$('ctrl-tbody');tb.innerHTML='';
@@ -2303,6 +2350,9 @@ function renderBalance(){
   fx.forEach(r=>{if(r.tipo==='COMPRA'){tu+=r.usd;tc+=r.cop;}else if(r.tipo==='INGRESO'){tu+=r.usd;}else{const avg=tu?tc/tu:0;tu-=r.usd;tc-=r.usd*avg;}});
   const tasa=parseFloat((dbq("SELECT valor FROM config WHERE clave='tasa_usd'")[0]||{valor:4100}).valor);
   const usdReal=bm.usd_reales_binance!=null?bm.usd_reales_binance:tu;
+  // Sync editable input in Balance view
+  const balUsdInp=$('bal-usd-real-inp');
+  if(balUsdInp&&bm.usd_reales_binance!=null)balUsdInp.value=bm.usd_reales_binance;
   const usdCop=usdReal*tasa;
 
   // Activos
